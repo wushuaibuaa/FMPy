@@ -35,9 +35,76 @@ def read_csv(filename, variable_names=[], validate=True):
 
 
 def write_csv(filename, result):
-    """ Save results as a CSV """
+    """ Save results as a CSV file """
     header = ','.join(map(lambda s: '"' + s + '"', result.dtype.names))
     np.savetxt(filename, result, delimiter=',', header=header, comments='', fmt='%g')
+
+
+def write_sdf(filename, model_description, result):
+    """ Save results as an SDF (Scientific Data Format) file"""
+
+    import sdf
+
+    names = result.dtype.names
+
+    g_root = sdf.Group('/')
+
+    ds_time = sdf.Dataset(names[0], data=result[names[0]], unit='s', comment="Simulation time")
+
+    g_root.datasets.append(ds_time)
+
+    for variable in model_description.modelVariables:
+
+        name = variable.name
+
+        if name in names:
+
+            g_parent = g_root
+
+            if model_description.variableNamingConvention == 'structured':
+
+                if name.startswith('der(') and name.endswith(')'):
+                    prefix = 'der('
+                    suffix = ')'
+                    name = name[4:-1]
+                else:
+                    prefix = suffix = ''
+
+                path = name.split('.')
+
+                for segment in path[:-1]:
+                    if segment in g_parent:
+                        if isinstance(g_parent[segment], sdf.Group):
+                            g_parent = g_parent[segment]
+                        else:
+                            break  # attach to next higher group
+                    else:
+                        g_child = sdf.Group(segment)
+                        g_parent.groups.append(g_child)
+                        g_parent = g_child
+
+                dataset_name = prefix + path[-1] + suffix
+
+            else:  # flat
+
+                dataset_name = variable.name
+
+            ds = sdf.Dataset(name=dataset_name,
+                             data=result[variable.name],
+                             comment=variable.description,
+                             scales=[ds_time])
+
+            if variable.causality == 'parameter' and np.all(ds.data == ds.data[-1]):
+                ds.data = ds.data[-1]
+                ds.scales = []
+
+            if variable.declaredType is not None:
+                ds.unit = variable.declaredType.unit
+                ds.display_unit = variable.declaredType.displayUnit
+
+            g_parent.datasets.append(ds)
+
+    sdf.save(filename, g_root)
 
 
 def read_ref_opt_file(filename):

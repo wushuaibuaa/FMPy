@@ -1,5 +1,6 @@
+from . import read_model_description
 from .simulation import simulate_fmu
-from .util import plot_result, read_csv, write_csv
+from .util import plot_result, read_csv, write_csv, write_sdf
 import argparse
 import textwrap
 
@@ -19,7 +20,7 @@ parser.add_argument('fmu_filename', help="filename of the FMU to simulate")
 parser.add_argument('--solver', choices=['Euler', 'CVode'], default='CVode', help="solver to use for Model Exchange")
 parser.add_argument('--input-file', help="CSV file to use as input")
 parser.add_argument('--output-variables', nargs='+', help="Variables to record")
-parser.add_argument('--output-file', help="CSV to store the results")
+parser.add_argument('--output-file', help="Result file name (*.csv, *.sdf)")
 parser.add_argument('--num-samples', default=500, type=int, help="number of samples to record")
 parser.add_argument('--step-size', type=float, help="step size for fixed-step solvers")
 parser.add_argument('--start-time', type=float, help="start time for the simulation")
@@ -53,7 +54,13 @@ if __name__ == '__main__':
                           fmi_logging=args.fmi_logging)
 
     if args.output_file:
-        write_csv(args.output_file, result)
+        if args.output_file.endswith('.csv'):
+            write_csv(args.output_file, result)
+        elif args.output_file.endswith('.sdf'):
+            model_description = read_model_description(args.fmu_filename)
+            write_sdf(args.output_file, model_description, result)
+        else:
+            raise Exception("Result file format is not supported.")
 
     if args.show_plot:
         plot_result(result=result, window_title=args.fmu_filename)

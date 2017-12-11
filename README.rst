@@ -47,11 +47,11 @@ and run the following command in the folder where you downloaded the FMU::
 | Rectifier.fmu | `Windows (32-bit)`_ | `Windows (64-bit)`_ | `Linux (32-bit)`_ | `Linux (64-bit)`_ | macOS_ |
 +---------------+---------------------+---------------------+-------------------+-------------------+--------+
 
-.. _Windows (32-bit): https://trac.fmi-standard.org/export/HEAD/branches/public/Test_FMUs/FMI_2.0/CoSimulation/win32/MapleSim/2016.2/Rectifier/Rectifier.fmu
-.. _Windows (64-bit): https://trac.fmi-standard.org/export/HEAD/branches/public/Test_FMUs/FMI_2.0/CoSimulation/win64/MapleSim/2016.2/Rectifier/Rectifier.fmu
-.. _Linux (32-bit): https://trac.fmi-standard.org/export/HEAD/branches/public/Test_FMUs/FMI_2.0/CoSimulation/linux32/MapleSim/2016.2/Rectifier/Rectifier.fmu
-.. _Linux (64-bit): https://trac.fmi-standard.org/export/HEAD/branches/public/Test_FMUs/FMI_2.0/CoSimulation/linux64/MapleSim/2016.2/Rectifier/Rectifier.fmu
-.. _macOS: https://trac.fmi-standard.org/export/HEAD/branches/public/Test_FMUs/FMI_2.0/CoSimulation/darwin64/MapleSim/2016.2/Rectifier/Rectifier.fmu
+.. _Windows (32-bit): https://trac.fmi-standard.org/export/HEAD/branches/public/Test_FMUs/FMI_2.0/CoSimulation/win32/MapleSim/2017/Rectifier/Rectifier.fmu
+.. _Windows (64-bit): https://trac.fmi-standard.org/export/HEAD/branches/public/Test_FMUs/FMI_2.0/CoSimulation/win64/MapleSim/2017/Rectifier/Rectifier.fmu
+.. _Linux (32-bit): https://trac.fmi-standard.org/export/HEAD/branches/public/Test_FMUs/FMI_2.0/CoSimulation/linux32/MapleSim/2017/Rectifier/Rectifier.fmu
+.. _Linux (64-bit): https://trac.fmi-standard.org/export/HEAD/branches/public/Test_FMUs/FMI_2.0/CoSimulation/linux64/MapleSim/2017/Rectifier/Rectifier.fmu
+.. _macOS: https://trac.fmi-standard.org/export/HEAD/branches/public/Test_FMUs/FMI_2.0/CoSimulation/darwin64/MapleSim/2017/Rectifier/Rectifier.fmu
 
 .. image:: Rectifier_result.png
 

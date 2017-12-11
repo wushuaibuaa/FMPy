@@ -12,7 +12,7 @@ def simulate_coupled_clutches(fmi_version='2.0',
 
     # download the FMU and input file
     for filename in ['CoupledClutches.fmu', 'CoupledClutches_in.csv']:
-        download_test_file(fmi_version, fmi_type, 'MapleSim', '2016.2', 'CoupledClutches', filename)
+        download_test_file(fmi_version, fmi_type, 'MapleSim', '2017', 'CoupledClutches', filename)
 
     print("Loading input...")
     input = np.genfromtxt('CoupledClutches_in.csv', delimiter=',', names=True)
