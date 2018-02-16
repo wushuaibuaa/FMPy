@@ -58,6 +58,32 @@ def write_csv(filename, result, columns=None):
     np.savetxt(filename, result, delimiter=',', header=header, comments='', fmt='%g')
 
 
+def write_mat(filename, result, columns=None):
+    """ Save a simulation result as a MAT file with the following structure:
+
+        names: char matrix that holds the column names
+        data:  double matrix that holds the time series
+
+    Parameters:
+        filename   name of the MAT file to write
+        result     structured NumPy array that holds the result
+        columns    list of column names to save (None: save all)
+    """
+
+    from scipy.io import savemat
+
+    if columns is not None:
+        result = result[['time'] + columns]
+
+    names = result.dtype.names
+    data = np.vstack([result[name] for name in names])
+
+    savemat(file_name=filename, mdict={
+        'names': names, # np.asarray(names, dtype=np.object),
+        'data': data
+    })
+
+
 def read_ref_opt_file(filename):
 
     opts = {}

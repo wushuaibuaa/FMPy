@@ -2,6 +2,7 @@
 *.fmu
 *.ssp
 *.csv
+*.mat
 *.html
 
 # compiled files

@@ -731,18 +731,26 @@ class MainWindow(QMainWindow):
         filename, _ = QFileDialog.getSaveFileName(parent=self,
                                                   caption="Save Result",
                                                   directory=filename + '_out.csv',
-                                                  filter="Comma Separated Values (*.csv);;All Files (*.*)")
+                                                  filter="Comma Separated Values (*.csv);;MAT Files (*.mat);;All Files (*.*)")
 
         if filename:
-            from ..util import write_csv
 
             if plotted:
                 columns = [variable.name for variable in self.selectedVariables]
             else:
                 columns = None
 
+            _, extension = os.path.splitext(filename)
+
             try:
-                write_csv(filename=filename, result=self.result, columns=columns)
+                if extension == '.csv':
+                    from ..util import write_csv
+                    write_csv(filename=filename, result=self.result, columns=columns)
+                elif extension == '.mat':
+                    from ..util import write_mat
+                    write_mat(filename=filename, result=self.result, columns=columns)
+                else:
+                    raise Exception("File extension must be one of '.csv' or '.mat")
             except Exception as e:
                 QMessageBox.critical(self, "Failed to write result", '"Failed to write "%s". %s' % (filename, e))
 
