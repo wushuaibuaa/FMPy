@@ -40,6 +40,7 @@ install_requires = ['lxml', 'numpy', 'pathlib', 'pypiwin32;platform_system=="Win
 extras_require = {
     'examples': ['dask[bag]', 'requests'],
     'plot': ['matplotlib'],
+    'mat': ['scipy'],
     'gui': ['PyQt5', 'pyqtgraph']
 }
 
