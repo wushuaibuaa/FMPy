@@ -84,6 +84,33 @@ def write_mat(filename, result, columns=None):
     })
 
 
+def write_xls(filename, result, columns=None):
+    """ Save a simulation result as an Excel file
+
+    Parameters:
+        filename   name of the Excel file to write
+        result     structured NumPy array that holds the result
+        columns    list of column names to save (None: save all)
+    """
+
+    import xlwt
+
+    if columns is not None:
+        result = result[['time'] + columns]
+
+    book = xlwt.Workbook()
+    sh = book.add_sheet('Sheet1')
+
+    for i, name in enumerate(result.dtype.names):
+        sh.write(0, i, name)
+        values = result[name]
+
+        for j, value in enumerate(values):
+            sh.write(j+1, i, float(value))
+
+    book.save(filename)
+
+
 def read_ref_opt_file(filename):
 
     opts = {}

@@ -4,6 +4,7 @@
 *.csv
 *.mat
 *.html
+*.xls
 
 # compiled files
 *.py[cod]

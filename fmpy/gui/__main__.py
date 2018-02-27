@@ -733,7 +733,7 @@ class MainWindow(QMainWindow):
         filename, _ = QFileDialog.getSaveFileName(parent=self,
                                                   caption="Save Result",
                                                   directory=filename + '_out.csv',
-                                                  filter="Comma Separated Values (*.csv);;MAT Files (*.mat);;All Files (*.*)")
+                                                  filter="Comma Separated Values (*.csv);;Excel Workbooks (*.xls);;MAT Files (*.mat);;All Files (*.*)")
 
         if filename:
 
@@ -748,6 +748,9 @@ class MainWindow(QMainWindow):
                 if extension == '.csv':
                     from ..util import write_csv
                     write_csv(filename=filename, result=self.result, columns=columns)
+                elif extension == '.xls':
+                    from ..util import write_xls
+                    write_xls(filename=filename, result=self.result, columns=columns)
                 elif extension == '.mat':
                     from ..util import write_mat
                     write_mat(filename=filename, result=self.result, columns=columns)
