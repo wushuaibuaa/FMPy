@@ -1,5 +1,9 @@
 """ Object model and loader for the modelDescription.xml """
 
+from threading import Lock
+
+_lock = Lock()  # for synchronizing access to zipfile
+
 
 class ModelDescription(object):
 
@@ -207,9 +211,11 @@ def read_model_description(filename, validate=True):
     from lxml import etree
     import os
 
-    with zipfile.ZipFile(filename, 'r') as zf:
-        xml = zf.open('modelDescription.xml')
-        tree = etree.parse(xml)
+    # synchronize access to zipfile
+    with _lock:
+        with zipfile.ZipFile(filename, 'r') as zf:
+            xml = zf.open('modelDescription.xml')
+            tree = etree.parse(xml)
 
     root = tree.getroot()
 
