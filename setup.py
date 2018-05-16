@@ -40,7 +40,8 @@ install_requires = ['lxml', 'numpy', 'pathlib', 'pywin32;platform_system=="Windo
 extras_require = {
     'examples': ['dask[bag]', 'requests'],
     'plot': ['matplotlib'],
-    'gui': ['PyQt5', 'pyqtgraph']
+    'gui': ['PyQt5', 'pyqtgraph'],
+    'cross-check': ['GitPython'],
 }
 
 extras_require['complete'] = sorted(set(sum(extras_require.values(), [])))
