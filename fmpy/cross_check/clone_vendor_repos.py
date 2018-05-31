@@ -47,6 +47,10 @@ def clone_vendor_repos(destination=None, vendors=None):
 
                 Repo.clone_from(url=clone_url, to_path=repo_dir, progress=Progress())
 
+            except Exception as e:
+                # something went wrong...
+                print(e)
+
 
 if __name__ == '__main__':
 
