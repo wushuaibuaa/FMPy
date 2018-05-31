@@ -131,12 +131,6 @@ def validate_cross_check_result(result_dir, tools):
         a list of problems
     """
 
-    # check if the import has claims 'passed' state
-    claims_passsed = os.path.isfile(os.path.join(result_dir, 'passed'))
-
-    if not claims_passsed:
-        return []  # skip this result
-
     problems = []
 
     path, model_name = os.path.split(result_dir)
@@ -184,15 +178,15 @@ def validate_cross_check_result(result_dir, tools):
     try:
         # read the result
         res = read_csv(csv_filename)
+
+        # validate the results
+        problem = validate_result(result=res, reference=ref)
+
+        if problem:
+            problems.append('Error in %s: %s' % (csv_filename, problem))
+
     except Exception as e:
         problems.append("Error in %s. %s" % (csv_filename, e))
-        return problems
-
-    # validate the results
-    problem = validate_result(result=res, reference=ref)
-
-    if problem is not None:
-        problems.append('Error in %s: %s' % (csv_filename, problem))
 
     return problems
 
@@ -346,6 +340,8 @@ if __name__ == '__main__':
 
     parser.add_argument('repo_path', nargs='?', help="path to the vendor repository")
     parser.add_argument('--json', help="JSON file to save the problems")
+    parser.add_argument('--fix-fmus', action='store_true', help="Create 'doesNotComplyToLatestRules' file for non-compliant FMUs")
+    parser.add_argument('--fix-results', action='store_true', help="Remove 'available' file for non-compliant results")
 
     args = parser.parse_args()
 
@@ -361,6 +357,9 @@ if __name__ == '__main__':
     tools = get_exporting_tools(repos_dir)
 
     s = segments(vendor_dir)
+
+    n_results = 0
+    n_results_ignored = 0
 
     # validate the cross-check results
     for subdir, dirs, files in os.walk(os.path.join(vendor_dir, 'CrossCheck_Results')):
@@ -381,36 +380,66 @@ if __name__ == '__main__':
         if platform not in ['c-code', 'darwin64', 'linux32', 'linux64', 'win32', 'win64']:
             continue
 
-        problems += validate_cross_check_result(subdir, tools)
+        passed_file = os.path.join(subdir, 'passed')
 
-    # # validate the test FMUs
-    # for subdir, dirs, files in os.walk(os.path.join(vendor_dir, 'Test_FMUs')):
-    #
-    #     t = segments(subdir)
-    #
-    #     if len(t) - len(s) != 7:
-    #         continue
-    #
-    #     fmi_version, fmi_type, platform = t[-6:-3]
-    #
-    #     if fmi_version not in ['FMI_1.0', 'FMI_2.0']:
-    #         continue
-    #
-    #     if fmi_type not in ['CoSimulation', 'ModelExchange']:
-    #         continue
-    #
-    #     if platform not in ['c-code', 'darwin64', 'linux32', 'linux64', 'win32', 'win64']:
-    #         continue
-    #
-    #     problems += validate_test_fmu(subdir)
+        # check if the import has claims 'passed' state
+        claims_passsed = os.path.isfile(passed_file)
 
+        if claims_passsed:
+            result_problems = validate_cross_check_result(subdir, tools)
 
-    # filter Unknown...
-    problems = [p for p in problems if not p.startswith('Unknown')]
+            if result_problems and args.fix_results:
+                print("Removing %s" % passed_file)
+                os.remove(passed_file)
+
+            problems += result_problems
+        else:
+            n_results_ignored += 1
+
+        n_results += 1
+
+    n_fmus = 0
+    n_fmus_ignored = 0
+
+    # validate the test FMUs
+    for subdir, dirs, files in os.walk(os.path.join(vendor_dir, 'Test_FMUs')):
+
+        t = segments(subdir)
+
+        if len(t) - len(s) != 7:
+            continue
+
+        fmi_version, fmi_type, platform = t[-6:-3]
+
+        if fmi_version not in ['FMI_1.0', 'FMI_2.0']:
+            continue
+
+        if fmi_type not in ['CoSimulation', 'ModelExchange']:
+            continue
+
+        if platform not in ['c-code', 'darwin64', 'linux32', 'linux64', 'win32', 'win64']:
+            continue
+
+        does_not_comply_file = os.path.join(subdir, 'doesNotComplyWithLatestRules')
+
+        if os.path.isfile(does_not_comply_file):
+            n_fmus_ignored += 1
+        else:
+            fmu_problems = validate_test_fmu(subdir)
+
+            if fmu_problems and args.fix_fmus:
+                print("Creating %s" % does_not_comply_file)
+                open(does_not_comply_file, 'a').close()
+
+            problems += fmu_problems
+
+        n_fmus += 1
 
     print()
     print("#################################")
     print("%d problems found in %s" % (len(problems), vendor_dir))
+    print("Results: %d (%d ignored)" % (n_results, n_results_ignored))
+    print("FMUs: %d (%d ignored)" % (n_fmus, n_fmus_ignored))
     print("#################################")
     print()
 
