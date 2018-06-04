@@ -88,7 +88,7 @@ def validate_test_fmu(model_dir):
         problems.append("Error in %s. %s" % (ref_opts_filename, e))
 
     # check the CSVs
-    for suffix, required in [('_cc.csv', True), ('_in.csv', False), ('_ref.csv', True)]:
+    for suffix, required in [('_in.csv', False), ('_ref.csv', True)]:
 
         csv_filename = os.path.join(model_dir, model_name + suffix)
 
@@ -100,23 +100,9 @@ def validate_test_fmu(model_dir):
         except Exception as e:
             problems.append("Error in %s. %s" % (csv_filename, e))
 
-    # check compliance checker log file
-    cc_logfile = model_name + '_cc.log'
-
-    if not os.path.isfile(os.path.join(model_dir, cc_logfile)):
-        problems.append("%s is missing in %s" % (cc_logfile, model_dir))
-
-    # check ReadMe
-    if not os.path.isfile(os.path.join(model_dir, 'ReadMe.txt')) and not os.path.isfile(os.path.join(model_dir, 'ReadMe.pdf')):
-        problems.append("Readme.[txt|pdf] is missing in %s" % model_dir)
-
-    if platform in ['win32', 'win64']:
-        cc_script = model_name + '_cc.bat'
-    else:
-        cc_script = model_name + '_cc.sh'
-
-    if not os.path.isfile(os.path.join(model_dir, cc_script)):
-        problems.append("%s is missing in %s" % (cc_script, model_dir))
+    # check README
+    if not os.path.isfile(os.path.join(model_dir, 'README.md')) and not os.path.isfile(os.path.join(model_dir, 'README.txt')):
+        problems.append("README.[md|txt] is missing in %s" % model_dir)
 
     return problems
 
@@ -233,6 +219,9 @@ def validate_result(result, reference, stop_time=None):
 
     # TODO: check rel_out
 
+    if rel_out > 0.1:
+        print(rel_out)
+
     return None
 
 
@@ -340,7 +329,7 @@ if __name__ == '__main__':
 
     parser.add_argument('repo_path', nargs='?', help="path to the vendor repository")
     parser.add_argument('--json', help="JSON file to save the problems")
-    parser.add_argument('--fix-fmus', action='store_true', help="Create 'doesNotComplyToLatestRules' file for non-compliant FMUs")
+    parser.add_argument('--fix-fmus', action='store_true', help="Create 'notCompliantWithLatestRules' file for non-compliant FMUs")
     parser.add_argument('--fix-results', action='store_true', help="Remove 'available' file for non-compliant results")
 
     args = parser.parse_args()
