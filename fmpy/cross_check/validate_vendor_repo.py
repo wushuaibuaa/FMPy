@@ -83,26 +83,38 @@ def validate_test_fmu(model_dir):
     # check the reference options file
     try:
         ref_opts_filename = os.path.join(model_dir, model_name + '_ref.opt')
-        read_ref_opt_file(ref_opts_filename)
+        ref_opts = read_ref_opt_file(ref_opts_filename)
     except Exception as e:
         problems.append("Error in %s. %s" % (ref_opts_filename, e))
+        return problems
 
-    # check the CSVs
-    for suffix, required in [('_in.csv', False), ('_ref.csv', True)]:
+    # check the input file
+    in_filename = os.path.join(model_dir, model_name + '_in.csv')
 
-        csv_filename = os.path.join(model_dir, model_name + suffix)
-
-        if not required and not os.path.isfile(csv_filename):
-            continue
-
+    if os.path.isfile(in_filename):
         try:
-            read_csv(csv_filename, variable_names=variable_names)
+            # TODO: only check against input variables?
+            read_csv(in_filename, variable_names=variable_names)
         except Exception as e:
-            problems.append("Error in %s. %s" % (csv_filename, e))
+            problems.append("Error in %s. %s" % (in_filename, e))
+            return problems
 
-    # check README
-    if not os.path.isfile(os.path.join(model_dir, 'README.md')) and not os.path.isfile(os.path.join(model_dir, 'README.txt')):
-        problems.append("README.[md|txt] is missing in %s" % model_dir)
+    ref_filename = os.path.join(model_dir, model_name + '_ref.csv')
+
+    # check reference output
+    try:
+        ref = read_csv(ref_filename, variable_names=variable_names)
+
+        t_ref = ref[ref.dtype.names[0]]
+
+        # check if StartTime and StopTime are contained in the reference result
+        if t_ref[0] > ref_opts['StartTime'] or t_ref[-1] < ref_opts['StopTime']:
+            problems.append("Error in %s. StartTime (%g s) and StopTime (%g s) defined the *_ref.opt are not contained in the reference result (%g - %g s)." % (ref_filename, ref_opts['StartTime'], ref_opts['StopTime'], t_ref[0], t_ref[-1]))
+            return problems
+
+    except Exception as e:
+        problems.append("Error in %s. %s" % (ref_filename, e))
+        return problems
 
     return problems
 
@@ -217,10 +229,10 @@ def validate_result(result, reference, stop_time=None):
         _, _, _, outliers = validate_signal(t=t_res, y=y_res, t_ref=t_ref, y_ref=y_ref)
         rel_out = np.max([np.sum(outliers) / float(len(outliers)), rel_out])
 
-    # TODO: check rel_out
+        # TODO: check rel_out
 
-    if rel_out > 0.1:
-        print(rel_out)
+        if rel_out > 0.1:
+            return 'More than 10% of the samples outside epsilon band for variable "%s"' % name
 
     return None
 
@@ -392,6 +404,8 @@ if __name__ == '__main__':
 
     # validate the test FMUs
     for subdir, dirs, files in os.walk(os.path.join(vendor_dir, 'Test_FMUs')):
+
+        break
 
         t = segments(subdir)
 

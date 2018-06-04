@@ -70,7 +70,7 @@ def read_ref_opt_file(filename):
 
     # check for required elements
     for element in ['StepSize', 'StartTime', 'StopTime', 'RelTol']:
-        if not element in opts:
+        if element not in opts:
             raise Exception("Missing element '%s'" % element)
 
     start_time = opts['StartTime']
