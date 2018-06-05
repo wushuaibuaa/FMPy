@@ -218,11 +218,11 @@ def validate_result(result, reference, t_start, t_stop):
 
     # check if stop time has been reached
     if t_res[0] > t_start:
-        return 'The result starts after the start time'
+        return 'The result starts at %g after the start time (%g s)' % (t_res[0], t_start)
 
     # check if stop time has been reached
     if t_res[-1] < t_stop:
-        return 'The stop time %g has not been reached'
+        return 'The result ends at %g s before the stop time (%g s)' % (t_res[-1], t_stop)
 
     # check if all reference signals are contained in the result
     for name in reference.dtype.names[1:]:
