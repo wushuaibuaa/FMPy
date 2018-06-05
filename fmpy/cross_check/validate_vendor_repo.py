@@ -216,8 +216,6 @@ def validate_result(result, reference, stop_time=None):
         if name not in result.dtype.names:
             return 'Variable "%s" is missing' % name
 
-    rel_out = 0
-
     # find the signal with the most outliers
     for name in result.dtype.names[1:]:
 
@@ -227,9 +225,9 @@ def validate_result(result, reference, stop_time=None):
         y_ref = reference[name]
         y_res = result[name]
         _, _, _, outliers = validate_signal(t=t_res, y=y_res, t_ref=t_ref, y_ref=y_ref)
-        rel_out = np.max([np.sum(outliers) / float(len(outliers)), rel_out])
 
-        # TODO: check rel_out
+        # calculate the relative number of outliers
+        rel_out = np.sum(outliers) / float(len(outliers))
 
         if rel_out > 0.1:
             return 'More than 10% of the samples outside epsilon band for variable "%s"' % name
@@ -237,32 +235,34 @@ def validate_result(result, reference, stop_time=None):
     return None
 
 
-def validate_signal(t, y, t_ref, y_ref, num=1000, dx=20, dy=0.1):
+def validate_signal(t, y, t_ref, y_ref, t_start, t_stop, num=1000, dx=21, dy=0.1):
     """ Validate a signal y(t) against a reference signal y_ref(t_ref) by creating a band
     around y_ref and finding the values in y outside the band
 
     Parameters:
 
-        t       time of the signal
-        y       values of the signal
-        t_ref   time of the reference signal
-        y_ref   values of the reference signal
-        num     number of samples for the band
-        dx      horizontal width of the band in samples
-        dy      vertical distance of the band to y_ref
+        t        time of the signal
+        y        values of the signal
+        t_ref    time of the reference signal
+        y_ref    values of the reference signal
+        t_start  start time of the band
+        t_stop   stop time of the band
+        num      number of samples for the band
+        dx       horizontal tolerance in samples
+        dy       relative vertical tolerance
 
     Returns:
 
         t_band  time values of the band
         y_min   lower limit of the band
         y_max   upper limit of the band
-        i_out   indices of the values in y outside the band
+        i_out   indices of the outliers in y
     """
 
     from scipy.ndimage.filters import maximum_filter1d, minimum_filter1d
 
     # re-sample the reference signal into a uniform grid
-    t_band = np.linspace(start=t_ref[0], stop=t_ref[-1], num=num)
+    t_band = np.linspace(start=t_start, stop=t_stop, num=num)
 
     # sort out the duplicate samples before the interpolation
     m = np.concatenate(([True], np.diff(t_ref) > 0))
@@ -288,8 +288,8 @@ def validate_signal(t, y, t_ref, y_ref, num=1000, dx=20, dy=0.1):
     i_out = np.logical_or(y < y_min_i, y > y_max_i)
 
     # do not count outliers outside the t_ref
-    i_out = np.logical_and(i_out, t > t_band[0])
-    i_out = np.logical_and(i_out, t < t_band[-1])
+    i_out = np.logical_and(i_out, t >= t_start)
+    i_out = np.logical_and(i_out, t <= t_stop)
 
     return t_band, y_min, y_max, i_out
 
@@ -404,8 +404,6 @@ if __name__ == '__main__':
 
     # validate the test FMUs
     for subdir, dirs, files in os.walk(os.path.join(vendor_dir, 'Test_FMUs')):
-
-        break
 
         t = segments(subdir)
 
