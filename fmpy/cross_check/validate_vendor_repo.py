@@ -156,6 +156,14 @@ def validate_cross_check_result(result_dir, tools):
         problems.append('The exported FMU does not comply with the cross-check rules')
         return problems
 
+    # read the *_ref.opt file
+    try:
+        ref_opts_filename = os.path.join(ref_dir, model_name + '_ref.opt')
+        ref_opts = read_ref_opt_file(ref_opts_filename)
+    except Exception as e:
+        problems.append("Failed to read %s. %s" % (ref_opts_filename, e))
+        return problems
+
     # check the output file
     ref_csv_filename = os.path.join(ref_dir, model_name + '_ref.csv')
 
@@ -178,7 +186,7 @@ def validate_cross_check_result(result_dir, tools):
         res = read_csv(csv_filename)
 
         # validate the results
-        problem = validate_result(result=res, reference=ref)
+        problem = validate_result(result=res, reference=ref, t_start=ref_opts['StartTime'], t_stop=ref_opts['StopTime'])
 
         if problem:
             problems.append('Error in %s: %s' % (csv_filename, problem))
@@ -189,12 +197,13 @@ def validate_cross_check_result(result_dir, tools):
     return problems
 
 
-def validate_result(result, reference, stop_time=None):
+def validate_result(result, reference, t_start, t_stop):
     """ Validate a simulation result against a reference result
 
     Parameters:
         result      structured NumPy array where the first column is the time
         reference   same as result
+        ...
 
     Returns:
         problems    a list of problems
@@ -208,7 +217,11 @@ def validate_result(result, reference, stop_time=None):
         return 'The result must have at least two samples'
 
     # check if stop time has been reached
-    if stop_time is not None and t_res[-1] < stop_time:
+    if t_res[0] > t_start:
+        return 'The result starts after the start time'
+
+    # check if stop time has been reached
+    if t_res[-1] < t_stop:
         return 'The stop time %g has not been reached'
 
     # check if all reference signals are contained in the result
@@ -224,7 +237,7 @@ def validate_result(result, reference, stop_time=None):
 
         y_ref = reference[name]
         y_res = result[name]
-        _, _, _, outliers = validate_signal(t=t_res, y=y_res, t_ref=t_ref, y_ref=y_ref)
+        _, _, _, outliers = validate_signal(t=t_res, y=y_res, t_ref=t_ref, y_ref=y_ref, t_start=t_start, t_stop=t_stop)
 
         # calculate the relative number of outliers
         rel_out = np.sum(outliers) / float(len(outliers))
