@@ -7,9 +7,11 @@ from fmpy.cross_check.cross_check import cross_check
 
 parser = argparse.ArgumentParser(description='run the FMI cross-check')
 
-parser.add_argument('--fmus_dir', default=os.getcwd(), help='the directory that contains the test FMUs')
+# TODO: CLI example
+
+parser.add_argument('--vendor-repos-dir', default=os.getcwd(), help='directory that contains the vendor repositories')
 parser.add_argument('--report', default='report.html', help='name of the report file')
-parser.add_argument('--result_dir', help='the directory to store the results')
+parser.add_argument('--result-dir', help='the directory to store the results')
 parser.add_argument('--include', nargs='+', default=[], help='path segments to include')
 parser.add_argument('--exclude', nargs='+', default=[], help='path segments to exclude')
 parser.add_argument('--simulate', action='store_true', help='simulate the FMU')
@@ -71,22 +73,9 @@ def simulate(options):
     return result
 
 
-def readme():
-    return """The cross-check results have been generated with the fmpy.cross_check module.
-    To get more information install FMPy and enter the following command:
-    
-    python -m fmpy.cross_check --help
-    
-    Python version used for this simulation:
-    
-    """ + sys.version
-
-
-cross_check(fmus_dir=args.fmus_dir,
-            report=args.report,
-            result_dir=args.result_dir,
-            simulate=simulate if args.simulate else None,
+cross_check(vendor_repos_dir=args.vendor_repos_dir,
+            vendor='3ds',
             tool_name='FMPy',
             tool_version=fmpy.__version__,
             skip=skip,
-            readme=readme)
+            simulate=simulate if args.simulate else None)
