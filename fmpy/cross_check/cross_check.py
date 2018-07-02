@@ -82,6 +82,44 @@ def cross_check(vendor_repos_dir, vendor, tool_name, tool_version, skip, simulat
         </style>
     </head>
     <body>
+
+<div>
+  <span>Filter:</span>
+  <label><input type="checkbox" checked id="show-skipped" onclick="filterRows()">skipped</label>
+  <label><input type="checkbox" checked id="show-successful" onclick="filterRows()">100 %</label>
+</div>
+
+<script>
+function filterRows() {
+
+  var table = document.getElementById("myTable");
+  var tr = table.getElementsByTagName("tr");
+
+  var showSkipped = document.getElementById("show-skipped").checked;
+  var showSuccessful = document.getElementById("show-successful").checked;
+
+  for (var i = 0; i < tr.length; i++) {
+
+    var td = tr[i].getElementsByTagName("td")[7];
+
+    if (td) {
+
+      if (!showSkipped && td.innerHTML.indexOf("n/a") > -1) {
+        tr[i].style.display = "none";
+        continue;
+      }
+
+      if (!showSuccessful && td.innerHTML.indexOf("100 %") > -1) {
+        tr[i].style.display = "none";
+        continue;
+      }
+
+      tr[i].style.display = "";
+    }
+  }
+}
+</script>
+    
         <table>''')
     html.write('<tr><th>Model</th><th>FMU</th><th>Opts</th><th>In</th><th>Ref</th><th>Doc</th><th>Sim</th><th>Res</th></tr>\n')
 
