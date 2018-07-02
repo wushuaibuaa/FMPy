@@ -244,7 +244,7 @@ def cross_check(vendor_repos_dir, vendor, tool_name, tool_version, skip, simulat
                     start_time = time.time()
 
                     options['fmu_filename'] = fmu_filename
-                    options['step_size'] = step_size
+                    options['step_size'] = step_size if step_size > 0 else None
                     options['stop_time'] = stop_time
 
                     if in_path is not None:

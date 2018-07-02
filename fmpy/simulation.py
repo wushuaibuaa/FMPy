@@ -464,6 +464,8 @@ def simulate_fmu(filename,
     if step_size is None:
         total_time = stop_time - start_time
         step_size = 10 ** (np.round(np.log10(total_time)) - 3)
+    elif step_size <= 0:
+        raise Exception('step_size must be greater than 0')
 
     if os.path.isfile(os.path.join(filename, 'modelDescription.xml')):
         unzipdir = filename
