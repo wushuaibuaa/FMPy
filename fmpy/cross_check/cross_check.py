@@ -85,14 +85,14 @@ def cross_check(vendor_repos_dir, vendor, tool_name, tool_version, skip, simulat
 
 <div>
   <span>Filter:</span>
-  <label><input type="checkbox" checked id="show-skipped" onclick="filterRows()">skipped</label>
-  <label><input type="checkbox" checked id="show-successful" onclick="filterRows()">100 %</label>
+  <label><input type="checkbox" checked id="show-skipped" onclick="filterRows()" checked>skipped</label>
+  <label><input type="checkbox" checked id="show-successful" onclick="filterRows()" checked>100 %</label>
 </div>
 
 <script>
 function filterRows() {
 
-  var table = document.getElementById("myTable");
+  var table = document.getElementById("tbl-results");
   var tr = table.getElementsByTagName("tr");
 
   var showSkipped = document.getElementById("show-skipped").checked;
@@ -120,7 +120,7 @@ function filterRows() {
 }
 </script>
     
-        <table>''')
+        <table id="tbl-results">''')
     html.write('<tr><th>Model</th><th>FMU</th><th>Opts</th><th>In</th><th>Ref</th><th>Doc</th><th>Sim</th><th>Res</th></tr>\n')
 
     for vendor in os.listdir(vendor_repos_dir):
