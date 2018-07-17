@@ -25,12 +25,15 @@ else:
 # load the C library functions
 if sys.platform.startswith('win'):
     calloc = cdll.msvcrt.calloc
+    realloc = cdll.msvcrt.realloc
+    realloc.restype = c_void_p
     free = cdll.msvcrt.free
     freeLibrary = _ctypes.FreeLibrary
 else:
     from ctypes.util import find_library
     libc = CDLL(find_library("c"))
     calloc = libc.calloc
+    realloc = libc.realloc
     free = libc.free
     freeLibrary = _ctypes.dlclose
 

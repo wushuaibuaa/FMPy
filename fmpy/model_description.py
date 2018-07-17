@@ -78,6 +78,9 @@ class ScalarVariable(object):
         self.type = None
         "One of 'Real', 'Integer', 'Enumeration', 'Boolean', 'String'"
 
+        self.dimensions = []
+        "List of value references to the variables that hold the dimensions"
+
         self.unit = None
 
         self.start = None
@@ -220,7 +223,9 @@ def read_model_description(filename, validate=True):
 
     fmiVersion = root.get('fmiVersion')
 
-    if fmiVersion not in ['1.0', '2.0']:
+    if fmiVersion.startswith('3.0'):
+        validate = False  # experimental
+    elif fmiVersion not in ['1.0', '2.0']:
         raise Exception("Unsupported FMI version: %s" % fmiVersion)
 
     if validate:
@@ -354,7 +359,7 @@ def read_model_description(filename, validate=True):
     initial_defaults = {
         'constant':   {'output': 'exact', 'local': 'exact'},
         'fixed':      {'parameter': 'exact', 'calculatedParameter': 'calculated', 'local': 'calculated'},
-        'tunable':    {'parameter': 'exact', 'calculatedParameter': 'calculated', 'local': 'calculated'},
+        'tunable':    {'parameter': 'exact', 'calculatedParameter': 'calculated', 'structuralParameter': 'exact', 'local': 'calculated'},
         'discrete':   {'input': None, 'output': 'calculated', 'local': 'calculated'},
         'continuous': {'input': None, 'output': 'calculated', 'local': 'calculated', 'independent': None},
     }
@@ -399,29 +404,41 @@ def read_model_description(filename, validate=True):
             if sv.initial is None:
                 sv.initial = initial_defaults[sv.variability][sv.causality]
 
+        for dimension in variable.findall('Dimensions/Dimension'):
+            sv.dimensions.append(int(dimension.get('valueReference')))
+
         modelDescription.modelVariables.append(sv)
 
-    # model structure
-    for attr, element in [(modelDescription.outputs, 'Outputs'),
-                          (modelDescription.derivatives, 'Derivatives'),
-                          (modelDescription.initialUnknowns, 'InitialUnknowns')]:
+    variables = dict((v.valueReference, v) for v in modelDescription.modelVariables)
 
-        for u in root.findall('ModelStructure/' + element + '/Unknown'):
-            unknown = Unknown()
+    # resolve dimensions and calculate extent
+    for variable in modelDescription.modelVariables:
+        variable.dimensions = list(map(lambda vr: variables[vr], variable.dimensions))
+        variable.extent = tuple(map(lambda d: int(d.start), variable.dimensions))
 
-            unknown.variable = modelDescription.modelVariables[int(u.get('index')) - 1]
+    if fmiVersion == '2.0':
 
-            dependencies = u.get('dependencies')
+        # model structure
+        for attr, element in [(modelDescription.outputs, 'Outputs'),
+                              (modelDescription.derivatives, 'Derivatives'),
+                              (modelDescription.initialUnknowns, 'InitialUnknowns')]:
 
-            if dependencies:
-                for i in dependencies.split(' '):
-                    unknown.dependencies.append(modelDescription.modelVariables[int(i) - 1])
+            for u in root.findall('ModelStructure/' + element + '/Unknown'):
+                unknown = Unknown()
 
-            dependenciesKind = u.get('dependenciesKind')
+                unknown.variable = modelDescription.modelVariables[int(u.get('index')) - 1]
 
-            if dependenciesKind:
-                unknown.dependenciesKind = u.get('dependenciesKind').split(' ')
+                dependencies = u.get('dependencies')
 
-            attr.append(unknown)
+                if dependencies:
+                    for i in dependencies.split(' '):
+                        unknown.dependencies.append(modelDescription.modelVariables[int(i) - 1])
+
+                dependenciesKind = u.get('dependenciesKind')
+
+                if dependenciesKind:
+                    unknown.dependenciesKind = u.get('dependenciesKind').split(' ')
+
+                attr.append(unknown)
 
     return modelDescription
