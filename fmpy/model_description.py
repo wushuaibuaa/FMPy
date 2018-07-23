@@ -223,9 +223,7 @@ def read_model_description(filename, validate=True):
 
     fmiVersion = root.get('fmiVersion')
 
-    if fmiVersion.startswith('3.0'):
-        validate = False  # experimental
-    elif fmiVersion not in ['1.0', '2.0']:
+    if not fmiVersion.startswith('3.0') and fmiVersion not in ['1.0', '2.0']:
         raise Exception("Unsupported FMI version: %s" % fmiVersion)
 
     if validate:
@@ -234,8 +232,10 @@ def read_model_description(filename, validate=True):
 
         if fmiVersion == '1.0':
             schema = etree.XMLSchema(file=os.path.join(module_dir, 'schema', 'fmi1', 'fmiModelDescription.xsd'))
-        else:
+        elif fmiVersion == '2.0':
             schema = etree.XMLSchema(file=os.path.join(module_dir, 'schema', 'fmi2', 'fmi2ModelDescription.xsd'))
+        else:
+            schema = etree.XMLSchema(file=os.path.join(module_dir, 'schema', 'fmi3', 'fmi3ModelDescription.xsd'))
 
         if not schema.validate(root):
             message = "Failed to validate modelDescription.xml:"
