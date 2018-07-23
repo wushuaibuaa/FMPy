@@ -46,12 +46,22 @@ fmi3LastSuccessfulTime = 2
 fmi3Terminated         = 3
 
 
+# allocated memory
+_mem_addr = set()
+
+
 def reallocateMemory(componentEnvironment, ptr, new_size):
-    return realloc(ptr, new_size)
+    mem = realloc(ptr, new_size)
+    _mem_addr.add(mem)
+    return mem
 
 
 def freeMemory(componentEnvironment, obj):
-    free(obj)
+    if obj in _mem_addr:
+        free(obj)
+        _mem_addr.remove(obj)
+    else:
+        print("freeMemory() was called for a pointer (%s) that was not allocated" % obj)
 
 
 def stepFinished(componentEnvironment, status):

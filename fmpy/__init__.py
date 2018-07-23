@@ -26,7 +26,6 @@ else:
 if sys.platform.startswith('win'):
     calloc = cdll.msvcrt.calloc
     realloc = cdll.msvcrt.realloc
-    realloc.restype = c_void_p
     free = cdll.msvcrt.free
     freeLibrary = _ctypes.FreeLibrary
 else:
@@ -37,11 +36,14 @@ else:
     free = libc.free
     freeLibrary = _ctypes.dlclose
 
-
 calloc.argtypes = [c_size_t, c_size_t]
 calloc.restype = c_void_p
 
+realloc.argtypes = [c_void_p, c_size_t]
+realloc.restype = c_void_p
+
 free.argtypes = [c_void_p]
+free.restype = None
 
 if sys.maxsize > 2**32:
     platform += '64'
