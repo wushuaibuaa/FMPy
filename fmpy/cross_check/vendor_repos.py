@@ -4,6 +4,7 @@ def clone_repos(tools_csv, vendor_repos_dir):
     """
 
     import os
+    import requests
     from subprocess import call
     from fmpy.cross_check import get_vendor_ids
 
@@ -19,21 +20,31 @@ def clone_repos(tools_csv, vendor_repos_dir):
 
             try:
                 print('Pulling %s...' % vendor)
+
                 # revert all changed files
                 call(['git', 'reset', '--hard'], cwd=repo_dir)
+
                 # remove untracked files and directories
-                call(['git', 'clean', '-fd'], cwd=repo_dir)
+                call(['git', 'clean', '-d', '--force'], cwd=repo_dir)
+
                 # pull from origin
                 call(['git', 'lfs', 'pull'], cwd=repo_dir)
-                # TODO: reset --hard, clean -fd
             except Exception as e1:
-                # clone the repository if it doesn't exist yet
+
                 print('Cloning %s...' % vendor)
-                try:
-                    call(['git', 'clone', clone_url], cwd=vendor_repos_dir)
-                except Exception as e2:
-                    # catch problems like empty repo
-                    print(e2)
+
+                # check if the URL exists
+                request = requests.get(clone_url)
+
+                if request.status_code == 200:
+
+                    try:
+                        # clone the repository
+                        call(['git', 'clone', '--quiet', clone_url], cwd=vendor_repos_dir)
+                    except Exception as e2:
+                        print(e2)
+                else:
+                    print('Repository does not exist')
 
 
 if __name__ == '__main__':
