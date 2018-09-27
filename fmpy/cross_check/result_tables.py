@@ -6,8 +6,8 @@ def generate_result_tables(repo_dir, data_dir):
 
     combinations = []  # all permutations of FMI version, type and platform
 
-    for fmi_version in ['FMI_1.0', 'FMI_2.0']:
-        for fmi_type in ['CoSimulation', 'ModelExchange']:
+    for fmi_version in ['1.0', '2.0']:
+        for fmi_type in ['cs', 'me']:
             for platform in ['c-code', 'darwin64', 'linux32', 'linux64', 'win32', 'win64']:
                 combinations.append((fmi_version, fmi_type, platform))
 
@@ -37,18 +37,16 @@ def generate_result_tables(repo_dir, data_dir):
 
         results = []
 
-        for vendor in sorted(vendors.keys()):
+        vendor_repo = os.path.join(repo_dir, 'results')
 
-            vendor_repo = os.path.join(repo_dir, vendor, 'CrossCheck_Results')
+        for root, dirs, files in os.walk(vendor_repo):
 
-            for root, dirs, files in os.walk(vendor_repo):
+            if 'passed' not in files:
+                continue
 
-                if 'passed' not in files:
-                    continue
+            segments = split_path(root)
 
-                segments = split_path(root)
-
-                results.append(segments[-8:])
+            results.append(segments[-8:])
 
         return results
 
@@ -106,9 +104,9 @@ def generate_result_tables(repo_dir, data_dir):
         importing_tools = [tools[tool_id] for tool_id in importing_tools]
         exporting_tools = [tools[tool_id] for tool_id in exporting_tools]
 
-        csv_filename = 'fmi1' if fmi_version == 'FMI_1.0' else 'fmi2'
+        csv_filename = 'fmi1' if fmi_version == '1.0' else 'fmi2'
         csv_filename += '-'
-        csv_filename += 'cs' if fmi_type == 'CoSimulation' else 'me'
+        csv_filename += fmi_type
         csv_filename += '-'
         csv_filename += platform + '.csv'
 
@@ -124,9 +122,9 @@ if __name__ is '__main__':
 
     parser = argparse.ArgumentParser(description="Generate the cross-check result tables")
 
-    parser.add_argument('vendor_repos_dir', help="Directory that contains the vendor repositories")
+    parser.add_argument('xc_repo_dir', help="Cloned cross-check repository")
     parser.add_argument('data_dir', help="_data directory in the fmi-standard.org repository")
 
     args = parser.parse_args()
 
-    generate_result_tables(repo_dir=args.vendor_repos_dir, data_dir=args.data_dir)
+    generate_result_tables(repo_dir=args.xc_repo_dir, data_dir=args.data_dir)
