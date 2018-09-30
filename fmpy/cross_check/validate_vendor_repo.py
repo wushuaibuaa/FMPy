@@ -56,6 +56,15 @@ def validate_test_fmu(model_dir):
 
     problems = []
 
+    # check file sizes
+    for root, dirs, files in os.walk(model_dir):
+        for file in files:
+            filename = os.path.join(root, file)
+            filesize = os.path.getsize(filename)
+            maxsize = 4e6 if file.endswith('.fmu') else 1e6
+            if filesize > maxsize:
+                problems.append("%s is larger than %g MB (%g MB)" % (filename, maxsize * 1e-6, filesize * 1e-6))
+
     _, model_name = os.path.split(model_dir)
 
     # if os.path.isfile(os.path.join(model_dir, 'notCompliantWithLatestRules')):
@@ -127,6 +136,14 @@ def validate_cross_check_result(result_dir):
 
     problems = []
 
+    # check file sizes
+    for root, dirs, files in os.walk(result_dir):
+        for file in files:
+            filename = os.path.join(root, file)
+            filesize = os.path.getsize(filename)
+            if filesize > 1e6:
+                problems.append("%s is larger than 1 MB (%.1f MB)" % (filename, filesize * 1e-6))
+
     # if os.path.isfile(os.path.join(result_dir, 'notCompliantWithLatestRules')):
     #     return problems
 
@@ -171,6 +188,23 @@ def validate_repo(vendor_dir, clean_up=False):
     problems = []
 
     s = segments(vendor_dir)
+
+    # if clean_up:
+    #     for subdir, dirs, files in os.walk(vendor_dir):
+    #
+    #         for file in files:
+    #             if file.endswith(('.min.css', '.style.css', '.min.js', '_report.html', '-index.html', '.pdf', '.png', '.bmp', '.mdl', '.cmake', '.slx', '.mat', '_cc.log', '_cc.bat', '_cc.csv')):
+    #                 filename = os.path.join(subdir, file)
+    #                 print("Removing %s" % filename)
+    #                 #os.remove(filename)
+    #
+    #         for dirname in dirs:
+    #             if dirname in ['css', 'js', '.svn']:
+    #                 dirpath = os.path.join(subdir, dirname)
+    #                 print("Removing %s" % dirpath)
+    #                 shutil.rmtree(dirpath)
+    #
+    #     return problems
 
     # validate the cross-check results
     for subdir, dirs, files in os.walk(os.path.join(vendor_dir, 'results')):
