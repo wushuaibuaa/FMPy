@@ -6,6 +6,7 @@ import numpy as np
 import shutil
 
 from fmpy import read_model_description
+from fmpy.cross_check import validate_result
 from fmpy.util import read_ref_opt_file
 
 
@@ -36,11 +37,6 @@ def read_csv(filename, variable_names=None):
             if name not in variable_names:
                 raise Exception("Variable '%s' does not exist in the FMU" % name)
 
-    # # check if the variable names match the trajectory names
-    # for variable_name in variable_names:
-    #     if variable_name not in traj_names:
-    #         raise ValidationError("Trajectory of '" + variable_name + "' is missing")
-
     return traj
 
 
@@ -67,9 +63,6 @@ def validate_test_fmu(model_dir):
 
     _, model_name = os.path.split(model_dir)
 
-    # if os.path.isfile(os.path.join(model_dir, 'notCompliantWithLatestRules')):
-    #     return []
-
     fmu_filename = os.path.join(model_dir, model_name + '.fmu')
 
     # validate the modelDescription.xml
@@ -90,7 +83,6 @@ def validate_test_fmu(model_dir):
         problems.append("Error in %s. %s" % (ref_opts_filename, e))
 
     # check the CSVs
-    # for suffix, required in [('_cc.csv', True), ('_in.csv', False), ('_ref.csv', True)]:
     for suffix, required in [('_in.csv', False), ('_ref.csv', True)]:
 
         csv_filename = os.path.join(model_dir, model_name + suffix)
@@ -102,24 +94,6 @@ def validate_test_fmu(model_dir):
             read_csv(csv_filename, variable_names=variable_names)
         except Exception as e:
             problems.append("Error in %s. %s" % (csv_filename, e))
-
-    # # check compliance checker log file
-    # cc_logfile = model_name + '_cc.log'
-
-    # if not os.path.isfile(os.path.join(model_dir, cc_logfile)):
-    #     problems.append("%s is missing in %s" % (cc_logfile, model_dir))
-
-    # check ReadMe
-    # if not os.path.isfile(os.path.join(model_dir, 'ReadMe.txt')) and not os.path.isfile(os.path.join(model_dir, 'ReadMe.pdf')):
-    #    problems.append("Readme.[txt|pdf] is missing in %s" % model_dir)
-
-    # if platform in ['win32', 'win64']:
-    #     cc_script = model_name + '_cc.bat'
-    # else:
-    #     cc_script = model_name + '_cc.sh'
-    #
-    # if not os.path.isfile(os.path.join(model_dir, cc_script)):
-    #     problems.append("%s is missing in %s" % (cc_script, model_dir))
 
     return problems
 
@@ -144,25 +118,43 @@ def validate_cross_check_result(result_dir):
             if filesize > 1e6:
                 problems.append("%s is larger than 1 MB (%.1f MB)" % (filename, filesize * 1e-6))
 
-    # if os.path.isfile(os.path.join(result_dir, 'notCompliantWithLatestRules')):
-    #     return problems
-
-    # check ReadMe
-    # if not os.path.isfile(os.path.join(result_dir, 'ReadMe.txt')) and not os.path.isfile(os.path.join(result_dir, 'ReadMe.pdf')):
-    #    problems.append("Readme.[txt|pdf] is missing in %s" % result_dir)
-
-    if not os.path.isfile(os.path.join(result_dir, 'passed')):
-        return problems
-
     _, model_name = os.path.split(result_dir)
 
     # check the output file
-    csv_filename = os.path.join(result_dir, model_name + '_out.csv')
+    res_filename = os.path.join(result_dir, model_name + '_out.csv')
 
     try:
-        read_csv(csv_filename)
+        result = read_csv(res_filename)
     except Exception as e:
-        problems.append("Error in %s. %s" % (csv_filename, e))
+        problems.append("Error in %s. %s" % (res_filename, e))
+
+    passed_file = os.path.join(result_dir, 'passed')
+
+    if not os.path.isfile(passed_file):
+        return problems  # stop here
+
+    t = segments(result_dir)
+
+    fmi_version, fmi_type, platform, importing_tool_name, importing_tool_version, exporting_tool_name, exporting_tool_version, model_name = t[-8:]
+
+    repo_dir = os.path.join(*t[:-9])
+
+    fmu_dir = os.path.join(repo_dir, 'fmus', fmi_version, fmi_type, platform, exporting_tool_name, exporting_tool_version, model_name)
+
+    ref_filename = os.path.join(fmu_dir, model_name + '_ref.csv')
+    opt_filename = os.path.join(fmu_dir, model_name + '_ref.opt')
+
+    try:
+        reference = read_csv(ref_filename)
+        opt = read_ref_opt_file(opt_filename)
+    except Exception as e:
+        problems.append("Error in %s. %s" % (res_filename, e))
+        return problems  # stop here
+
+    problem = validate_result(result=result, reference=reference, t_start=opt['StartTime'], t_stop=opt['StopTime'])
+
+    if problem is not None:
+        problems.append("Error in %s. %s" % (res_filename, problem))
 
     return problems
 
@@ -189,35 +181,17 @@ def validate_repo(vendor_dir, clean_up=False):
 
     s = segments(vendor_dir)
 
-    # if clean_up:
-    #     for subdir, dirs, files in os.walk(vendor_dir):
-    #
-    #         for file in files:
-    #             if file.endswith(('.min.css', '.style.css', '.min.js', '_report.html', '-index.html', '.pdf', '.png', '.bmp', '.mdl', '.cmake', '.slx', '.mat', '_cc.log', '_cc.bat', '_cc.csv')):
-    #                 filename = os.path.join(subdir, file)
-    #                 print("Removing %s" % filename)
-    #                 #os.remove(filename)
-    #
-    #         for dirname in dirs:
-    #             if dirname in ['css', 'js', '.svn']:
-    #                 dirpath = os.path.join(subdir, dirname)
-    #                 print("Removing %s" % dirpath)
-    #                 shutil.rmtree(dirpath)
-    #
-    #     return problems
+    result_count = 0
 
     # validate the cross-check results
     for subdir, dirs, files in os.walk(os.path.join(vendor_dir, 'results')):
-
-        # passed_file = os.path.join(subdir, 'passed')
-
-        # if not os.path.isfile(passed_file):
-        #     continue  # ignore
 
         t = segments(subdir)
 
         if len(t) - len(s) != 9:
             continue
+
+        result_count += 1
 
         fmi_version, fmi_type, platform, importing_tool_name, importing_tool_version, exporting_tool_name, exporting_tool_version, model_name = t[-8:]
 
@@ -236,22 +210,19 @@ def validate_repo(vendor_dir, clean_up=False):
             print("Removing %s" % subdir)
             shutil.rmtree(subdir)
 
-            #os.remove(passed_file)
-
         problems += new_problems
+
+    fmu_count = 0
 
     # validate the test FMUs
     for subdir, dirs, files in os.walk(os.path.join(vendor_dir, 'fmus')):
-
-        # not_compliant_file = os.path.join(subdir, 'notCompliantWithLatestRules')
-
-        # if os.path.isfile(not_compliant_file):
-        #     continue  # ignore
 
         t = segments(subdir)
 
         if len(t) - len(s) != 7:
             continue
+
+        fmu_count += 1
 
         fmi_version, fmi_type, platform, tool_name, tool_version, model_name = t[-6:]
 
@@ -267,8 +238,6 @@ def validate_repo(vendor_dir, clean_up=False):
         new_problems = validate_test_fmu(subdir)
 
         if clean_up:
-            # with open(not_compliant_file, 'a'):
-            #     pass
             if new_problems:
                 print("Removing %s" % subdir)
                 shutil.rmtree(subdir)
@@ -281,7 +250,7 @@ def validate_repo(vendor_dir, clean_up=False):
 
         problems += new_problems
 
-    return problems
+    return fmu_count, result_count, problems
 
 
 if __name__ == '__main__':
@@ -306,11 +275,12 @@ if __name__ == '__main__':
     else:
         xc_repo = os.getcwd()
 
-    problems = validate_repo(xc_repo, args.clean_up)
+    fmu_count, result_count, problems = validate_repo(xc_repo, args.clean_up)
 
     print()
     print("#################################")
     print("%d problems found in %s" % (len(problems), xc_repo))
+    print("Validated %d FMUs and %d results" % (fmu_count, result_count))
     print("#################################")
     print()
 
