@@ -110,29 +110,6 @@ def validate_cross_check_result(result_dir):
 
     problems = []
 
-    # check file sizes
-    for root, dirs, files in os.walk(result_dir):
-        for file in files:
-            filename = os.path.join(root, file)
-            filesize = os.path.getsize(filename)
-            if filesize > 1e6:
-                problems.append("%s is larger than 1 MB (%.1f MB)" % (filename, filesize * 1e-6))
-
-    _, model_name = os.path.split(result_dir)
-
-    # check the output file
-    res_filename = os.path.join(result_dir, model_name + '_out.csv')
-
-    try:
-        result = read_csv(res_filename)
-    except Exception as e:
-        problems.append("Error in %s. %s" % (res_filename, e))
-
-    passed_file = os.path.join(result_dir, 'passed')
-
-    if not os.path.isfile(passed_file):
-        return problems  # stop here
-
     t = segments(result_dir)
 
     fmi_version, fmi_type, platform, importing_tool_name, importing_tool_version, exporting_tool_name, exporting_tool_version, model_name = t[-8:]
@@ -143,6 +120,30 @@ def validate_cross_check_result(result_dir):
 
     ref_filename = os.path.join(fmu_dir, model_name + '_ref.csv')
     opt_filename = os.path.join(fmu_dir, model_name + '_ref.opt')
+
+    # check file sizes
+    for root, dirs, files in os.walk(result_dir):
+        for file in files:
+            filename = os.path.join(root, file)
+            filesize = os.path.getsize(filename)
+            if filesize > 1e6:
+                problems.append("%s is larger than 1 MB (%.1f MB)" % (filename, filesize * 1e-6))
+
+    _, model_name = os.path.split(result_dir)
+
+    not_compliant_file = os.path.join(result_dir, 'notCompliantWithLatestRules')
+    passed_file = os.path.join(result_dir, 'passed')
+
+    if os.path.isfile(not_compliant_file) or not os.path.isfile(passed_file):
+        return problems  # stop here
+
+    # check the output file
+    res_filename = os.path.join(result_dir, model_name + '_out.csv')
+
+    try:
+        result = read_csv(res_filename)
+    except Exception as e:
+        problems.append("Error in %s. %s" % (res_filename, e))
 
     try:
         reference = read_csv(ref_filename)
