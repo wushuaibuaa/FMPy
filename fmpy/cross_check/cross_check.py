@@ -1,13 +1,10 @@
 import fmpy
-import zipfile
 import time
 from ..util import *
-
 from jinja2 import Environment, PackageLoader
 
 
-
-def cross_check(xc_repo, report, result_dir, simulate, tool_name, tool_version, skip, readme):
+def cross_check(xc_repo, simulate, tool_name, tool_version, skip):
 
     results_ = []
 
@@ -52,178 +49,89 @@ def cross_check(xc_repo, report, result_dir, simulate, tool_name, tool_version, 
         if not os.path.isfile(in_path):
             in_path = None
 
-        #reference, ref_csv_cell = check_csv_file(filename=ref_path, variables=output_variables)
+        result_['plot'] = ''
+        result_['cpu_time'] = 0.0
+        result_['status'] = 'danger'
+        result_['rel_out'] = 0.0
 
-        skipped = True
+        step_size = ref_opts['StepSize']
+        stop_time = ref_opts['StopTime']
 
-        if False:
-            pass
-        # if simulate is None:
-        #     sim_cell = '<td class="status" title="Simulation is disabled"><span class="label label-default">skipped</span></td>'
-        # elif ref_opts is None:
-        #     sim_cell = '<td class="status" title="Failed to read *_ref.opt file"><span class="label label-default">skipped</span></td>'
-        # elif input_variables and input is None:
-        #     sim_cell = '<td class="status" title="Input file is invalid"><span class="label label-default">skipped</span></td>'
+        if reference is not None:
+            output_variable_names = reference.dtype.names[1:]
         else:
-            skipped = False
+            output_variable_names = None
 
-            step_size = ref_opts['StepSize']
-            stop_time = ref_opts['StopTime']
+        try:
+            start_time = time.time()
 
-            if reference is not None:
-                output_variable_names = reference.dtype.names[1:]
-            else:
-                output_variable_names = None
+            options['fmu_filename'] = fmu_filename
+            options['step_size'] = step_size
+            options['stop_time'] = stop_time
 
-            try:
-                start_time = time.time()
+            if in_path is not None:
+                options['input_filename'] = in_path
 
-                options['fmu_filename'] = fmu_filename
-                options['step_size'] = step_size
-                options['stop_time'] = stop_time
+            options['output_variable_names'] = output_variable_names
 
-                if in_path is not None:
-                    options['input_filename'] = in_path
+            # simulate the FMU
+            result = simulate(options)
 
-                options['output_variable_names'] = output_variable_names
+            result_dir = os.path.join(xc_repo, 'results', options['fmi_version'], options['fmi_type'],
+                                           options['platform'], tool_name, tool_version, options['tool_name'],
+                                           options['tool_version'], options['model_name'])
 
-                # simulate the FMU
-                result = simulate(options)
+            if not os.path.exists(result_dir):
+                os.makedirs(result_dir)
 
-                result_dir = os.path.join(xc_repo, 'results', options['fmi_version'], options['fmi_type'],
+            result_filename = os.path.join(result_dir, options['model_name'] + '_out.csv')
+
+            header = ','.join(map(lambda s: '"' + s + '"', result.dtype.names))
+            np.savetxt(result_filename, result, delimiter=',', header=header, comments='', fmt='%g')
+
+            model_path = os.path.dirname(fmu_filename)
+
+            reference_filename = os.path.join(model_path, options['model_name'] + '_ref.csv')
+
+            # load the reference trajectories
+            reference = np.genfromtxt(reference_filename, delimiter=',', names=True, deletechars='')
+
+            plot_filename = os.path.join(result_dir, 'result.png')
+            plot_result(result, reference, filename=plot_filename)
+
+            relative_result_dir = os.path.join('results', options['fmi_version'], options['fmi_type'],
                                                options['platform'], tool_name, tool_version, options['tool_name'],
                                                options['tool_version'], options['model_name'])
 
-                if not os.path.exists(result_dir):
-                    os.makedirs(result_dir)
+            rel_out = validate_result(result=result, reference=reference)
 
-                result_filename = os.path.join(result_dir, options['model_name'] + '_out.csv')
+            result_['plot'] = os.path.join(relative_result_dir, 'result.png').replace('\\', '/')
 
-                header = ','.join(map(lambda s: '"' + s + '"', result.dtype.names))
-                np.savetxt(result_filename, result, delimiter=',', header=header, comments='', fmt='%g')
+            result_['cpu_time'] = time.time() - start_time
 
-                model_path = os.path.dirname(fmu_filename)
+            if rel_out > 0.1:
+                result_['status'] = 'danger'
+            elif rel_out > 0:
+                result_['status'] = 'warning'
+            else:
+                result_['status'] = 'success'
 
-                reference_filename = os.path.join(model_path, options['model_name'] + '_ref.csv')
+            result_['rel_out'] = (1 - rel_out) * 100
 
-                # load the reference trajectories
-                reference = np.genfromtxt(reference_filename, delimiter=',', names=True, deletechars='')
+        except Exception as e:
+            result_['status'] = 'danger'
+            print(e)
 
-                plot_filename = os.path.join(result_dir, 'result.png')
-                plot_result(result, reference, filename=plot_filename)
+        # write the indicator file
+        if rel_out < 0.1:
+            indicator_filename = 'passed'
+        else:
+            indicator_filename = 'failed'
 
-                sim_cell = '<td class="status"><span class="label label-success">%.2f s</span></td>' % (time.time() - start_time)
-
-                res_cell = "?"
-
-                relative_result_dir = os.path.join('results', options['fmi_version'], options['fmi_type'],
-                                                   options['platform'], tool_name, tool_version, options['tool_name'],
-                                                   options['tool_version'], options['model_name'])
-
-                # html.write(r'<td>' + options['model_name'] + '</td><td><div class="tooltip">' + res_cell + '<span class="tooltiptext"><img src="'
-                #                 + os.path.join(relative_result_dir, 'result.png').replace('\\', '/') + '"/></span ></div></td>')
-
-                rel_out = validate_result(result=result, reference=reference)
-
-                result_['plot'] = os.path.join(relative_result_dir, 'result.png').replace('\\', '/')
-
-                result_['cpu_time'] = time.time() - start_time
-
-                if rel_out > 0.1:
-                    result_['status'] = 'danger'
-                elif rel_out > 0:
-                    result_['status'] = 'warning'
-                else:
-                    result_['status'] = 'success'
-
-                result_['rel_out'] = (1 - rel_out) * 100
-
-
-            except Exception as e:
-                sim_cell = '<td class="status"><span class="label label-danger" title="' + str(e) + '">failed</span></td>'
+        with open(os.path.join(result_dir, indicator_filename), 'a'):
+            pass
 
         results_.append(result_)
-
-        # ##############
-        # # VALIDATION #
-        # ##############
-        # if skipped:
-        #     res_cell = '<span class="label label-default">n/a</span>'
-        # else:
-        #     try:
-        #         rel_out = validate_result(result=result, reference=reference)
-        #     except Exception as e:
-        #         print(str(e))
-        #         rel_out = 1
-        #
-        #     res_cell = '<span class="label '
-        #
-        #     if rel_out <= 0:
-        #         res_cell += 'label-success'
-        #     elif rel_out <= 0.1:
-        #         res_cell += 'label-warning'
-        #     else:
-        #         res_cell += 'label-danger'
-        #
-        #     res_cell += '">%d %%</span>' % np.floor((1.0 - rel_out) * 100)
-        #
-        # # this will remove any trailing (back)slashes
-        # fmus_dir = os.path.normpath(fmus_dir)
-        #
-        # model_path = fmu_filename[len(fmus_dir)+1:]
-        #
-        # model_path = os.path.dirname(model_path)
-        #
-        # html.write('<tr><td>' + root + '</td>')
-        # html.write('\n'.join([xml_cell, ref_opts_cell, in_csv_cell, ref_csv_cell, doc_cell, sim_cell]))
-        #
-        # if result_dir is not None and result is not None:
-        #
-        #     relative_result_dir = os.path.join(result_dir, options['fmi_version'], options['fmi_type'],
-        #                                        options['platform'], tool_name, tool_version, options['tool_name'],
-        #                                        options['tool_version'], options['model_name'])
-        #
-        #     fmu_result_dir = os.path.join(result_dir, relative_result_dir)
-        #
-        #     if not os.path.exists(fmu_result_dir):
-        #         os.makedirs(fmu_result_dir)
-        #
-        #     # write the indicator file
-        #     if skipped:
-        #         indicator_filename = 'rejected'
-        #     elif rel_out < 0.1:
-        #         indicator_filename = 'passed'
-        #     else:
-        #         indicator_filename = 'failed'
-        #
-        #     with open(os.path.join(fmu_result_dir, indicator_filename), 'w') as f:
-        #         pass
-        #
-        #     if readme is not None:
-        #         # write the ReadMe.txt file
-        #         with open(os.path.join(fmu_result_dir, 'ReadMe.txt'), 'w') as f:
-        #             f.write(readme())
-        #
-        #     result_filename = os.path.join(fmu_result_dir, model_name + '_out.csv')
-        #
-        #     header = ','.join(map(lambda s: '"' + s + '"', result.dtype.names))
-        #     np.savetxt(result_filename, result, delimiter=',', header=header, comments='', fmt='%g')
-        #
-        #     reference_filename = os.path.join(fmus_dir, model_path, model_name + '_ref.csv')
-        #
-        #     if os.path.isfile(reference_filename):
-        #         # load the reference trajectories
-        #         reference = np.genfromtxt(reference_filename, delimiter=',', names=True, deletechars='')
-        #     else:
-        #         reference = None
-        #
-        #     plot_filename = os.path.join(fmu_result_dir, 'result.png')
-        #     plot_result(result, reference, filename=plot_filename)
-        #
-        #     html.write(r'<td><div class="tooltip">' + res_cell + '<span class="tooltiptext"><img src="'
-        #                + os.path.join(relative_result_dir, 'result.png').replace('\\', '/') + '"/></span ></div></td>')
-        # else:
-        #     html.write('<td class="status">' + res_cell + '</td>\n')
 
     # write the report
     env = Environment(loader=PackageLoader('fmpy.cross_check'))
