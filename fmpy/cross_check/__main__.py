@@ -63,7 +63,7 @@ def simulate(options):
     # simulate the FMU
     result = fmpy.simulate_fmu(filename=options['fmu_filename'],
                                validate=False,
-                               step_size=options['step_size'],
+                               step_size=None if options['step_size'] <= 0 else options['step_size'],  # quick-fix
                                stop_time=options['stop_time'],
                                input=input,
                                output=options['output_variable_names'])

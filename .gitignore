@@ -4,6 +4,8 @@
 *.csv
 *.html
 
+!fmpy/cross_check/templates/*.html
+
 # Affinity Designer documents
 *.afdesign
 

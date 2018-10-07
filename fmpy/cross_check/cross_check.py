@@ -3,83 +3,13 @@ import zipfile
 import time
 from ..util import *
 
+from jinja2 import Environment, PackageLoader
+
+
 
 def cross_check(xc_repo, report, result_dir, simulate, tool_name, tool_version, skip, readme):
 
-    html = open(os.path.join(xc_repo, 'result.html'), 'w')
-    html.write('''<html>
-    <head>
-        <style>
-            p, li, td, th, footer {
-              font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-              font-size: 0.75em;
-              line-height: 1.5em;
-            }
-            td.passed { background-color: #eeffee; }
-            td.failed { background-color: #ffdddd; }
-
-            td.status { text-align: center; }
-
-            .label {
-                display: inline-block;
-                min-width: 35px;
-                padding: .5em .6em .5em;
-                font-size: 75%;
-                font-weight: 700;
-                line-height: 1;
-                color: #fff;
-                text-align: center;
-                white-space: nowrap;
-                vertical-align: baseline;
-                border-radius: .25em;
-            }
-
-            .label-danger {
-                background-color: #d9534f;
-            }
-
-            .label-warning {
-                background-color: #f0ad4e;
-            }
-
-            .label-success {
-                background-color: #5cb85c;
-            }
-
-            .label-default {
-                background-color: #777;
-            }
-
-            .tooltip {
-                position: relative;
-                display: inline-block;
-                border-bottom: 1px dotted black;
-            }
-
-            .tooltip .tooltiptext {
-                visibility: hidden;
-                width: auto;
-                background-color: black;
-                color: #fff;
-                text-align: center;
-                border-radius: 6px;
-                padding: 5px;
-
-                /* Position the tooltip */
-                position: absolute;
-                z-index: 1;
-                right: 0;
-                top: 30px;
-            }
-
-            .tooltip:hover .tooltiptext {
-                visibility: visible;
-            }
-        </style>
-    </head>
-    <body>
-        <table width="100%">''')
-    html.write('<tr><th>Model</th><th>Res</th></tr>\n')
+    results_ = []
 
     for root, dirs, files in os.walk(xc_repo):
 
@@ -108,95 +38,7 @@ def cross_check(xc_repo, report, result_dir, simulate, tool_name, tool_version, 
 
         print(root)
 
-        # ##########################
-        # # VALIDATE FMU AND FILES #
-        # ##########################
-        #
-        # # read the model description
-        # try:
-        #     model_description = fmpy.read_model_description(fmu_filename)
-        #     xml_cell = '<td class="status"><span class="label label-success">valid</span></td>'
-        # except Exception as e:
-        #     # try again without validation
-        #     model_description = fmpy.read_model_description(fmu_filename, validate=False)
-        #     xml_cell = '<td class="status"><span class="label label-danger" title="' + str(e) + '">invalid</span></td>'
-        #
-        # # check for documentation
-        # if model_description.fmiVersion == '1.0':
-        #     doc_path = 'documentation/_main.html'
-        # else:
-        #     doc_path = 'documentation/index.html'
-        #
-        # doc_cell = '<td class="status"><span class="label label-default" title="' + doc_path + " is missing" + '">n/a</span></td>'
-        #
-        # with zipfile.ZipFile(fmu_filename, 'r') as zf:
-        #     if doc_path in zf.namelist():
-        #         # TODO: validate HTML?
-        #         doc_cell = '<td class="status"><span class="label label-success">available</span></td>'
-        #
-        # input_variables = []
-        # output_variables = []
-        #
-        # # collect the variable names
-        # for variable in model_description.modelVariables:
-        #     if variable.causality == 'input':
-        #         input_variables.append(variable.name)
-        #     elif variable.causality == 'output':
-        #         output_variables.append(variable.name)
-        #
-        # # check the reference options file
-        # try:
-        #     ref_opts = read_ref_opt_file(os.path.join(root, fmu_name + '_ref.opt'))
-        #     ref_opts_cell = '<td class="status"><span class="label label-success">valid</span></td>'
-        # except Exception as e:
-        #     ref_opts = None
-        #     ref_opts_cell = '<td class="status"><span class="label label-danger" title="' + str(e) + '">invalid</span></td>'
-        #
-        # def check_csv_file(filename, variables):
-        #     """ Load the CSV and generate the table cell """
-        #
-        #     try:
-        #         # load with validation
-        #         traj = read_csv(filename=filename, variable_names=variables)
-        #         cell = '<td class="status"><span class="label '
-        #         cell += 'label-warning' if traj.size > 1000 else 'label-success'
-        #         cell += '">%d &times; %d</span></td>' % (len(traj.dtype), traj.size)
-        #     except Exception as e1:
-        #         try:
-        #             # load without validation
-        #             traj = read_csv(filename=filename)
-        #             cell = '<td class="status"><span class="label label-warning" title="' + str(e1) + '">%d &times; %d</span></td>' % (len(traj.dtype), traj.size)
-        #         except Exception as e2:
-        #             traj = None
-        #             cell = '<td class="status"><span class="label label-danger" title="' + str(e2) + '">invalid</span></td>'
-        #
-        #     return traj, cell
-        #
-        # # check the input file
-        # input = None
-        #
-        # if input_variables:
-        #     in_path = os.path.join(root, fmu_name + '_in.csv')
-        #     input, in_csv_cell = check_csv_file(filename=in_path, variables=input_variables)
-        # else:
-        #     in_path = None
-        #     in_csv_cell = '<td class="status"><span class="label label-default">n/a</span></td>'
-        #
-        # # check the reference file
-        # ref_path = os.path.join(root, fmu_name + '_ref.csv')
-        # reference, ref_csv_cell = check_csv_file(filename=ref_path, variables=output_variables)
-        #
-        # # supported_platforms = fmpy.supported_platforms(fmu_filename)
-        #
-        # # this will remove any trailing (back)slashes
-        # fmus_dir = os.path.normpath(fmus_dir)
-        # model_path = fmu_filename[len(fmus_dir) + 1:]
-        # model_path = os.path.dirname(model_path)
-        # fmu_simple_filename = os.path.basename(fmu_filename)
-        # model_name, _ = os.path.splitext(fmu_simple_filename)
-
-        # build the filenames
-        result = None
+        result_ = {'path': root}
 
         ##############
         # SIMULATION #
@@ -278,11 +120,29 @@ def cross_check(xc_repo, report, result_dir, simulate, tool_name, tool_version, 
                                                    options['platform'], tool_name, tool_version, options['tool_name'],
                                                    options['tool_version'], options['model_name'])
 
-                html.write(r'<td>' + options['model_name'] + '</td><td><div class="tooltip">' + res_cell + '<span class="tooltiptext"><img src="'
-                                + os.path.join(relative_result_dir, 'result.png').replace('\\', '/') + '"/></span ></div></td>')
+                # html.write(r'<td>' + options['model_name'] + '</td><td><div class="tooltip">' + res_cell + '<span class="tooltiptext"><img src="'
+                #                 + os.path.join(relative_result_dir, 'result.png').replace('\\', '/') + '"/></span ></div></td>')
+
+                rel_out = validate_result(result=result, reference=reference)
+
+                result_['plot'] = os.path.join(relative_result_dir, 'result.png').replace('\\', '/')
+
+                result_['cpu_time'] = time.time() - start_time
+
+                if rel_out > 0.1:
+                    result_['status'] = 'danger'
+                elif rel_out > 0:
+                    result_['status'] = 'warning'
+                else:
+                    result_['status'] = 'success'
+
+                result_['rel_out'] = (1 - rel_out) * 100
+
 
             except Exception as e:
                 sim_cell = '<td class="status"><span class="label label-danger" title="' + str(e) + '">failed</span></td>'
+
+        results_.append(result_)
 
         # ##############
         # # VALIDATION #
@@ -365,8 +225,13 @@ def cross_check(xc_repo, report, result_dir, simulate, tool_name, tool_version, 
         # else:
         #     html.write('<td class="status">' + res_cell + '</td>\n')
 
-        html.write('</tr>\n')
+    # write the report
+    env = Environment(loader=PackageLoader('fmpy.cross_check'))
 
-    html.write('</table></body></html>')
+    template = env.get_template('report.html')
+
+    report_filename = os.path.join(xc_repo, 'report.html')
+
+    template.stream(results=results_).dump(report_filename)
 
     print("Done.")

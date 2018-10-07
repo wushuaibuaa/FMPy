@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        p, li, td, th, footer {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          font-size: 0.75em;
+          line-height: 1.5em;
+        }
+        td.passed { background-color: #eeffee; }
+        td.failed { background-color: #ffdddd; }
+
+        td.status { text-align: center; }
+
+        .label {
+            display: inline-block;
+            min-width: 35px;
+            padding: .5em .6em .5em;
+            font-size: 75%;
+            font-weight: 700;
+            line-height: 1;
+            color: #fff;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: .25em;
+        }
+
+        .label-danger {
+            background-color: #d9534f;
+        }
+
+        .label-warning {
+            background-color: #f0ad4e;
+        }
+
+        .label-success {
+            background-color: #5cb85c;
+        }
+
+        .label-default {
+            background-color: #777;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            border-bottom: 1px dotted black;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: auto;
+            background-color: black;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+
+            /* Position the tooltip */
+            position: absolute;
+            z-index: 1;
+            right: 0;
+            top: 30px;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+
+<table width="100%">
+{% for result in results %}
+    <tr>
+        <td>{{ result['path'] }}</td>
+        <td><div class="tooltip"><span class="label label-{{ result['status'] }}">{{ result['rel_out']|int }} %</span><span class="tooltiptext"><img src="{{ result['plot'] }}"/></span ></div></td>
+        <td>{{ result['cpu_time']|round(1) }} s</td>
+    </tr>
+{% endfor %}
+</table>
+
+</body>
+</html>
