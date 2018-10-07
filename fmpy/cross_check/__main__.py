@@ -7,12 +7,12 @@ from fmpy.cross_check.cross_check import cross_check
 
 parser = argparse.ArgumentParser(description='run the FMI cross-check')
 
-parser.add_argument('--fmus_dir', default=os.getcwd(), help='the directory that contains the test FMUs')
+parser.add_argument('--xc_repo', default=os.getcwd(), help='the directory that contains the test FMUs')
 parser.add_argument('--report', default='report.html', help='name of the report file')
 parser.add_argument('--result_dir', help='the directory to store the results')
 parser.add_argument('--include', nargs='+', default=[], help='path segments to include')
 parser.add_argument('--exclude', nargs='+', default=[], help='path segments to exclude')
-parser.add_argument('--simulate', action='store_true', help='simulate the FMU')
+#parser.add_argument('--simulate', action='store_true', help='simulate the FMU')
 
 # parse the command line arguments
 args = parser.parse_args()
@@ -82,10 +82,10 @@ def readme():
     """ + sys.version
 
 
-cross_check(fmus_dir=args.fmus_dir,
+cross_check(xc_repo=args.xc_repo,
             report=args.report,
             result_dir=args.result_dir,
-            simulate=simulate if args.simulate else None,
+            simulate=simulate,  # if args.simulate else None,
             tool_name='FMPy',
             tool_version=fmpy.__version__,
             skip=skip,
