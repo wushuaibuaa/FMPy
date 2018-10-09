@@ -6,6 +6,7 @@ import sys
 from .fmi1 import *
 from .fmi1 import _FMU1
 from .fmi2 import *
+from . import fmi3
 from . import extract
 from .util import auto_interval
 import numpy as np
@@ -492,11 +493,16 @@ def simulate_fmu(filename,
         callbacks.allocateMemory = fmi1CallbackAllocateMemoryTYPE(allocateMemory)
         callbacks.freeMemory = fmi1CallbackFreeMemoryTYPE(freeMemory)
         callbacks.stepFinished = None
-    else:
+    elif model_description.fmiVersion == '2.0':
         callbacks = fmi2CallbackFunctions()
         callbacks.logger = fmi2CallbackLoggerTYPE(logger)
         callbacks.allocateMemory = fmi2CallbackAllocateMemoryTYPE(allocateMemory)
         callbacks.freeMemory = fmi2CallbackFreeMemoryTYPE(freeMemory)
+    else:
+        callbacks = fmi3.fmi3CallbackFunctions()
+        callbacks.logger = fmi3.fmi3CallbackLoggerTYPE(logger)
+        callbacks.allocateMemory = fmi3.fmi3CallbackAllocateMemoryTYPE(fmi3.allocateMemory)
+        callbacks.freeMemory = fmi3.fmi3CallbackFreeMemoryTYPE(fmi3.freeMemory)
 
     # simulate_fmu the FMU
     if fmi_type == 'ModelExchange' and model_description.modelExchange is not None:
@@ -721,8 +727,12 @@ def simulateCS(model_description, fmu_kwargs, start_time, stop_time, relative_to
     if model_description.fmiVersion == '1.0':
         fmu = FMU1Slave(**fmu_kwargs)
         fmu.instantiate(functions=callbacks, loggingOn=debug_logging)
-    else:
+    elif model_description.fmiVersion == '2.0':
         fmu = FMU2Slave(**fmu_kwargs)
+        fmu.instantiate(callbacks=callbacks, loggingOn=debug_logging)
+        fmu.setupExperiment(tolerance=relative_tolerance, startTime=start_time)
+    else:
+        fmu = fmi3.FMU3Slave(**fmu_kwargs)
         fmu.instantiate(callbacks=callbacks, loggingOn=debug_logging)
         fmu.setupExperiment(tolerance=relative_tolerance, startTime=start_time)
 

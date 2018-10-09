@@ -2,7 +2,7 @@
 
 import pathlib
 from ctypes import *
-from . import free, realloc
+from . import free, calloc
 from .fmi1 import _FMU, printLogMessage
 
 
@@ -27,10 +27,10 @@ fmi3Error   = 3
 fmi3Fatal   = 4
 fmi3Pending = 5
 
-fmi3CallbackLoggerTYPE           = CFUNCTYPE(None, fmi3ComponentEnvironment, fmi3String, fmi3Status, fmi3String, fmi3String)
-fmi3CallbackReallocateMemoryTYPE = CFUNCTYPE(c_void_p, fmi3ComponentEnvironment, c_void_p, c_size_t)
-fmi3CallbackFreeMemoryTYPE       = CFUNCTYPE(None, fmi3ComponentEnvironment, c_void_p)
-fmi3StepFinishedTYPE             = CFUNCTYPE(None, fmi3ComponentEnvironment, fmi3Status)
+fmi3CallbackLoggerTYPE         = CFUNCTYPE(None, fmi3ComponentEnvironment, fmi3String, fmi3Status, fmi3String, fmi3String)
+fmi3CallbackAllocateMemoryTYPE = CFUNCTYPE(c_void_p, fmi3ComponentEnvironment, c_size_t, c_size_t)
+fmi3CallbackFreeMemoryTYPE     = CFUNCTYPE(None, fmi3ComponentEnvironment, c_void_p)
+fmi3StepFinishedTYPE           = CFUNCTYPE(None, fmi3ComponentEnvironment, fmi3Status)
 
 fmi3ModelExchange = 0
 fmi3CoSimulation  = 1
@@ -50,8 +50,15 @@ fmi3Terminated         = 3
 _mem_addr = set()
 
 
-def reallocateMemory(componentEnvironment, ptr, new_size):
-    mem = realloc(ptr, new_size)
+def printLogMessage(componentEnvironment, instanceName, status, category, message):
+    """ Print the FMU's log messages to the command line """
+
+    label = ['OK', 'WARNING', 'DISCARD', 'ERROR', 'FATAL', 'PENDING'][status]
+    print("[%s] %s" % (label, message))
+
+
+def allocateMemory(componentEnvironment, nobj, size):
+    mem = calloc(nobj, size)
     _mem_addr.add(mem)
     return mem
 
@@ -71,7 +78,7 @@ def stepFinished(componentEnvironment, status):
 class fmi3CallbackFunctions(Structure):
 
     _fields_ = [('logger',               fmi3CallbackLoggerTYPE),
-                ('reallocateMemory',     fmi3CallbackReallocateMemoryTYPE),
+                ('allocateMemory',       fmi3CallbackAllocateMemoryTYPE),
                 ('freeMemory',           fmi3CallbackFreeMemoryTYPE),
                 ('stepFinished',         fmi3StepFinishedTYPE),
                 ('componentEnvironment', fmi3ComponentEnvironment)]
