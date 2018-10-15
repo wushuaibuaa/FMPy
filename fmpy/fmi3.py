@@ -134,35 +134,35 @@ class _FMU3(_FMU):
         # Getting and setting variable values
         self._fmi3Function('fmi3GetReal',
                            ['component', 'vr', 'nvr', 'value', 'nValues'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Real)], c_size_t)
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Real), c_size_t])
 
         self._fmi3Function('fmi3GetInteger',
-                           ['component', 'vr', 'nvr', 'value'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Integer)])
+                           ['component', 'vr', 'nvr', 'value', 'nValues'],
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Integer), c_size_t])
 
         self._fmi3Function('fmi3GetBoolean',
-                           ['component', 'vr', 'nvr', 'value'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Boolean)])
+                           ['component', 'vr', 'nvr', 'value', 'nValues'],
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Boolean), c_size_t])
 
         self._fmi3Function('fmi3GetString',
-                           ['component', 'vr', 'nvr', 'value'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3String)])
+                           ['component', 'vr', 'nvr', 'value', 'nValues'],
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3String), c_size_t])
 
         self._fmi3Function('fmi3SetReal',
                            ['component', 'vr', 'nvr', 'value', 'nValues'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Real)], c_size_t)
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Real), c_size_t])
 
         self._fmi3Function('fmi3SetInteger',
-                           ['component', 'vr', 'nvr', 'value'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Integer)])
+                           ['component', 'vr', 'nvr', 'value', 'nValues'],
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Integer), c_size_t])
 
         self._fmi3Function('fmi3SetBoolean',
-                           ['component', 'vr', 'nvr', 'value'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Boolean)])
+                           ['component', 'vr', 'nvr', 'value', 'nValues'],
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Boolean), c_size_t])
 
         self._fmi3Function('fmi3SetString',
-                           ['component', 'vr', 'nvr', 'value'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3String)])
+                           ['component', 'vr', 'nvr', 'value', 'nValues'],
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3String), c_size_t])
 
         # Getting and setting the internal FMU state
         self._fmi3Function('fmi3GetFMUstate', ['component', 'FMUstate'],
@@ -302,22 +302,28 @@ class _FMU3(_FMU):
 
     # Getting and setting variable values
 
-    def getReal(self, vr):
+    def getReal(self, vr, nValues=None):
+        if nValues is None:
+            nValues = len(vr)
         vr = (fmi3ValueReference * len(vr))(*vr)
-        value = (fmi3Real * len(vr))()
-        self.fmi3GetReal(self.component, vr, len(vr), value)
+        values = (fmi3Real * nValues)()
+        self.fmi3GetReal(self.component, vr, len(vr), values, nValues)
+        return list(values)
+
+    def getInteger(self, vr, nValues=None):
+        if nValues is None:
+            nValues = len(vr)
+        vr = (fmi3ValueReference * len(vr))(*vr)
+        value = (fmi3Integer * nValues)()
+        self.fmi3GetInteger(self.component, vr, len(vr), value, nValues)
         return list(value)
 
-    def getInteger(self, vr):
+    def getBoolean(self, vr, nValues=None):
+        if nValues is None:
+            nValues = len(vr)
         vr = (fmi3ValueReference * len(vr))(*vr)
-        value = (fmi3Integer * len(vr))()
-        self.fmi3GetInteger(self.component, vr, len(vr), value)
-        return list(value)
-
-    def getBoolean(self, vr):
-        vr = (fmi3ValueReference * len(vr))(*vr)
-        value = (fmi3Boolean * len(vr))()
-        self.fmi3GetBoolean(self.component, vr, len(vr), value)
+        value = (fmi3Boolean * nValues)()
+        self.fmi3GetBoolean(self.component, vr, len(vr), value, nValues)
         return list(value)
 
     def getString(self, vr):
@@ -329,7 +335,7 @@ class _FMU3(_FMU):
     def setReal(self, vr, value):
         vr = (fmi3ValueReference * len(vr))(*vr)
         value = (fmi3Real * len(vr))(*value)
-        self.fmi3SetReal(self.component, vr, len(vr), value)
+        self.fmi3SetReal(self.component, vr, len(vr), value, 1)
 
     def setInteger(self, vr, value):
         vr = (fmi3ValueReference * len(vr))(*vr)

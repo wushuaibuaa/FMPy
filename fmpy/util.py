@@ -284,7 +284,8 @@ def plot_result(result, reference=None, names=None, filename=None, window_title=
                 ax.set_ylim(-0.25, 1.25)
                 ax.yaxis.set_ticks([0, 1])
                 ax.yaxis.set_ticklabels(['false', 'true'])
-                ax.fill_between(time, y, 0, step='post', facecolor='b', alpha=0.1)
+                if y.ndim == 1:
+                    ax.fill_between(time, y, 0, step='post', facecolor='b', alpha=0.1)
             else:
                 ax.margins(x=0, y=0.05)
 

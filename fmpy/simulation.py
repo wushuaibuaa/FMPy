@@ -28,17 +28,10 @@ class Recorder(object):
         self.fmu = fmu
         self.interval = interval
 
-        self.cols = [('time', np.float64)]
+        self.cols = [('time', np.float64, None)]  # name, dtype, shape
         self.rows = []
-
-        real_names = []
-        self.real_vrs = []
-
-        integer_names = []
-        self.integer_vrs = []
-
-        boolean_names = []
-        self.boolean_vrs = []
+        self.info = {}  # type -> (names, vrs, shapes, n_values, getter)
+        self.types = []
 
         self.constants = {}
         self.modelDescription = modelDescription
@@ -48,22 +41,35 @@ class Recorder(object):
 
             # collect the variables to record
             if (variableNames is not None and sv.name in variableNames) or (variableNames is None and sv.causality == 'output'):
+                names, vrs, shapes, n_values, getter = self.info.get(sv.type, ([], [], [], 0, getattr(self.fmu, 'get' + sv.type)))
+                names.append(sv.name)
+                vrs.append(sv.valueReference)
+                shapes.append(sv.dimensions)
+                n_values += np.prod(sv.dimensions) if sv.dimensions else 1
+                self.info[sv.type] = names, vrs, shapes, n_values, getter
 
-                if sv.type == 'Real':
-                    real_names.append(sv.name)
-                    self.real_vrs.append(sv.valueReference)
-                elif sv.type in ['Integer', 'Enumeration']:
-                    integer_names.append(sv.name)
-                    self.integer_vrs.append(sv.valueReference)
-                elif sv.type == 'Boolean':
-                    boolean_names.append(sv.name)
-                    self.boolean_vrs.append(sv.valueReference)
-                else:
-                    pass  # skip String variables
+        # create the columns for the NumPy array
+        for t, dt in [('Real', np.float64), ('Integer', np.int32), ('Boolean', np.bool_)]:
+            if t in self.info:
+                self.types.append(t)
+                names, _, shapes, _, _ = self.info[t]
+                self.cols += zip(names, [dt] * len(names), shapes)
 
-        self.cols += zip(real_names, [np.float64] * len(real_names))
-        self.cols += zip(integer_names, [np.int32] * len(integer_names))
-        self.cols += zip(boolean_names, [np.bool_] * len(boolean_names))
+        # strip the shape for scalars
+        self.cols = [(n, t) if s is None else (n, t, s) for n, t, s in self.cols]
+
+    @staticmethod
+    def _append_reshaped(row, values, shapes):
+        i = 0
+        for d in shapes:
+            if d:
+                s = np.prod(d)
+                value = np.array(values[i:i + s]).reshape(d)
+                i += s
+            else:
+                value = values[i]
+                i += 1
+            row.append(value)
 
     def sample(self, time, force=False):
         """ Record the variables """
@@ -75,14 +81,10 @@ class Recorder(object):
 
         row = [time]
 
-        if self.real_vrs:
-            row += self.fmu.getReal(vr=self.real_vrs)
-
-        if self.integer_vrs:
-            row += self.fmu.getInteger(vr=self.integer_vrs)
-
-        if self.boolean_vrs:
-            row += self.fmu.getBoolean(vr=self.boolean_vrs)
+        for t in self.types:
+            names, vrs, shapes, nValues, getter = self.info[t]
+            values = getter(vr=vrs, nValues=nValues)
+            self._append_reshaped(row, values, shapes)
 
         self.rows.append(tuple(row))
 
@@ -764,6 +766,11 @@ def simulateCS(model_description, fmu_kwargs, start_time, stop_time, relative_to
             break
 
         recorder.sample(time)
+
+        #vr = (fmi3.fmi3ValueReference * 1)(0)
+        #value = (fmi3.fmi3Real * 2)()
+        #fmu.fmi3GetReal(fmu.component, vr, len(vr), value, 2)
+        #rl = list(value)
 
         input.apply(time)
 

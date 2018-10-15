@@ -78,7 +78,10 @@ class ScalarVariable(object):
         self.type = None
         "One of 'Real', 'Integer', 'Enumeration', 'Boolean', 'String'"
 
-        self.dimensions = []
+        self.dimensions = None
+        "List of fixed dimensions"
+
+        self.dimensionValueReferences = []
         "List of value references to the variables that hold the dimensions"
 
         self.unit = None
@@ -427,17 +430,24 @@ def read_model_description(filename, validate=True):
             if sv.initial is None:
                 sv.initial = initial_defaults[sv.variability][sv.causality]
 
-        for dimension in variable.findall('Dimensions/Dimension'):
-            sv.dimensions.append(int(dimension.get('valueReference')))
+        dimensions = variable.findall('Dimensions/Dimension')
+
+        if dimensions:
+            sv.dimensions = []
+            for dimension in dimensions:
+                start = dimension.get('start')
+                sv.dimensions.append(int(start) if start is not None else None)
+                vr = dimension.get('valueReference')
+                sv.dimensionValueReferences.append(int(vr) if vr is not None else None)
 
         modelDescription.modelVariables.append(sv)
 
     variables = dict((v.valueReference, v) for v in modelDescription.modelVariables)
 
     # resolve dimensions and calculate extent
-    for variable in modelDescription.modelVariables:
-        variable.dimensions = list(map(lambda vr: variables[vr], variable.dimensions))
-        variable.extent = tuple(map(lambda d: int(d.start), variable.dimensions))
+    # for variable in modelDescription.modelVariables:
+    #     variable.dimensions = list(map(lambda vr: variables[vr], variable.dimensions))
+    #     variable.extent = tuple(map(lambda d: int(d.start), variable.dimensions))
 
     if fmiVersion == '2.0':
 
