@@ -14,6 +14,10 @@
 
         td.status { text-align: center; }
 
+        td.result, td.cpu-time {
+            text-align: center;
+        }
+
         .label {
             display: inline-block;
             min-width: 35px;
@@ -74,11 +78,21 @@
 <body>
 
 <table width="100%">
+    <tr>
+        <th>FMU</th>
+        <th>Result</th>
+        <th>CPU Time</th>
+    </tr>
 {% for result in results %}
     <tr>
         <td>{{ result['path'] }}</td>
-        <td><div class="tooltip"><span class="label label-{{ result['status'] }}">{{ result['rel_out']|int }} %</span><span class="tooltiptext"><img src="{{ result['plot'] }}"/></span ></div></td>
-        <td>{{ result['cpu_time']|round(1) }} s</td>
+        <td class="result">
+            <div class="tooltip">
+                <span class="label label-{{ result['status'] }}">{{ result['rel_out']|int }} %</span>
+                <span class="tooltiptext"><img src="{{ result['plot'] }}"/></span >
+            </div>
+        </td>
+        <td class="cpu-time">{{ result['cpu_time']|round(1) }} s</td>
     </tr>
 {% endfor %}
 </table>
