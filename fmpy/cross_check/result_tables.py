@@ -2,6 +2,7 @@ def generate_result_tables(repo_dir, data_dir):
     """ Generate the cross-check result tables """
 
     import os
+    import csv
     from fmpy.cross_check import get_vendor_ids
 
     combinations = []  # all permutations of FMI version, type and platform
@@ -115,6 +116,8 @@ def generate_result_tables(repo_dir, data_dir):
             for importing_tool, row in zip(importing_tools, matrix):
                 f.write(','.join([importing_tool] + list(map(str, row))) + '\n')
 
+    participants = set()
+
     # generate the tools file with cross-check results
     export_passed = {}
     import_passed = {}
@@ -122,6 +125,9 @@ def generate_result_tables(repo_dir, data_dir):
     for fmi_version, fmi_type, platform, importing_tool_name, importing_tool_version, exporting_tool_name, exporting_tool_version, model_name in results:
 
         key = (exporting_tool_name, fmi_version, fmi_type)
+
+        participants.add(exporting_tool_name)
+        participants.add(importing_tool_name)
 
         if key not in export_passed:
             export_passed[key] = {}
@@ -141,42 +147,32 @@ def generate_result_tables(repo_dir, data_dir):
         else:
             import_passed[key][exporting_tool_name].add(model_name)
 
-    rows = []
+    # aggregate the results
+    participants = sorted(participants, key=lambda s: s.lower())
 
-    import csv
+    rows = [participants]
 
-    with open(os.path.join(data_dir, 'tools.csv'), 'r') as csvfile:
+    def check_passed(key, d):
+        cnt = 0
+        for vendor, models in d.get(key, {}).items():
+            if len(models) >= 3:
+                cnt += 1
+        return cnt >= 3
 
-        reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+    for results in [export_passed, import_passed]:
 
-        for row in reader:
+        for i, c in enumerate([('cs', '1.0'), ('cs', '2.0'), ('me', '1.0'), ('me', '2.0')]):
 
-            tool_id = row[1]
+            fmi_type, fmi_version = c
+            row = []
 
-            def check_passed(key, d):
-                cnt = 0
-                for vendor, models in d.get(key, {}).items():
-                    if len(models) >= 3:
-                        cnt += 1
-                return cnt >= 3
-
-            for i, c in enumerate([('cs', '1.0'), ('cs', '2.0'), ('me', '1.0'), ('me', '2.0')]):
-                fmi_type, fmi_version = c
+            for tool_id in participants:
                 key = (tool_id, fmi_version, fmi_type)
-
-                if check_passed(key, export_passed):
-                    row[6 + i] = 'passed'
-
-            for i, c in enumerate([('cs', '1.0'), ('cs', '2.0'), ('me', '1.0'), ('me', '2.0')]):
-                fmi_type, fmi_version = c
-                key = (tool_id, fmi_version, fmi_type)
-
-                if check_passed(key, import_passed):
-                    row[10 + i] = 'passed'
+                row.append('passed' if check_passed(key, results) else '')
 
             rows.append(row)
 
-    with open(os.path.join(data_dir, 'cross-check', 'tools.csv'), 'w', newline='') as f:
+    with open(os.path.join(data_dir, 'cross-check', 'result.csv'), 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerows(rows)
 
