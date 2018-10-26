@@ -144,6 +144,7 @@ def validate_cross_check_result(result_dir):
         result = read_csv(res_filename)
     except Exception as e:
         problems.append("Error in %s. %s" % (res_filename, e))
+        return problems  # stop here
 
     try:
         reference = read_csv(ref_filename)
