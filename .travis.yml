@@ -9,7 +9,7 @@ matrix:
 
     - os: linux
       env:
-        - PYTHON_VERSION=3.7
+        - PYTHON_VERSION=3.6
         - MINICONDA=Miniconda3-latest-Linux-x86_64.sh
 
     - os: osx
@@ -21,7 +21,7 @@ matrix:
     - os: osx
       language: generic
       env:
-        - PYTHON_VERSION=3.7
+        - PYTHON_VERSION=3.6
         - MINICONDA=Miniconda3-latest-MacOSX-x86_64.sh
 
 install:
