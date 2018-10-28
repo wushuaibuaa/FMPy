@@ -37,7 +37,7 @@ install:
   - conda info -a
 
   # create the conda environment
-  - conda create -q -n test-env -c anaconda python=$PYTHON_VERSION dask lxml matplotlib numpy pathlib pyqt pyqtgraph requests
+  - conda create -q -n test-env -c conda-forge python=$PYTHON_VERSION dask lxml matplotlib numpy pathlib pyqt pyqtgraph requests
   - source activate test-env
 
   # build the wheel
